@@ -133,10 +133,14 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
     unsigned way_start = 0;
     unsigned way_end = m_config.m_assoc;
 
+
     // for Dynamic Cache Part, change way_start and way_end for both apps
     // dynamically. Idea: Select way_start, and way_end based on LTE, and Cache
     // Sensitivity
-	//new
+	//newi
+
+     //printf("Way start and end is %d and %d \n",way_start,way_end);
+    // printf("Core id l2 is %d \n",core_id_l2);
     if (m_config.perfect_L1Cache) {
         idx = 0;
         return HIT;
@@ -146,7 +150,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
         idx = 0;
         return HIT;
     }
-
+    m_config.cache_part = 0 ;
     if (m_config.cache_part) {
         unsigned threshold;
 		if(gpu_mode3 ==0)
@@ -162,8 +166,9 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
 			}
 			if(gpu_mode3 == 0){
 				if (core_id_l2 >= threshold) {  
-					way_start = 0;
-					way_end = m_config.m_assoc/gpu_groups; 
+					way_start =  m_config.m_assoc/gpu_groups;;
+					way_end = m_config.m_assoc; 
+ 					 //printf("Way start and end is %d and %d \n",way_start,way_end);
 				}
 				
 			}else{
@@ -187,10 +192,14 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
         return MISS;
     }
 	
+/*    if(core_id_l2 != -1) 
+    {
+    printf("Way start and end is %d and %d \n",way_start,way_end);
+    }*/
 
     // check for hit or pending hit
     //for (unsigned way=0; way<m_config.m_assoc; way++) {
-	
+      
 	for (unsigned way=way_start; way<way_end; way++) { //new
         unsigned index = set_index*m_config.m_assoc+way;
         cache_block_t *line = &m_lines[index];
@@ -358,6 +367,7 @@ void tag_array::fill( unsigned index, unsigned time )
 // new
 bool tag_array::fill(mem_fetch *mf, new_addr_type addr, unsigned time ) 
 {
+    //printf("Here \n");
     assert( m_config.m_alloc_policy == ON_FILL );
     unsigned idx;
     bool filled = false;
@@ -917,6 +927,8 @@ void l2_cache::fill(mem_fetch *mf, unsigned time) {
 	extra_mf_fields_lookup::iterator e = m_extra_mf_fields.find(mf);
 	assert( e != m_extra_mf_fields.end() );
 	assert( e->second.m_valid );
+
+
 	mf->set_data_size( e->second.m_data_size );
 	if ( m_config.m_alloc_policy == ON_MISS )
 		m_tag_array->fill(e->second.m_cache_index,time);

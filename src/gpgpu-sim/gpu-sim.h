@@ -144,7 +144,8 @@ struct power_config {
     double gpu_idle_core_power;
     double gpu_min_inc_per_active_sm;
 
-
+    //Output stream file
+    char *stream_filename;
 };
 
 
