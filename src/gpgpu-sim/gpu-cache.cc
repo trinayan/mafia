@@ -139,7 +139,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
     // Sensitivity
 	//newi
 
-     //printf("Way start and end is %d and %d \n",way_start,way_end);
+//     printf("Way start and end is %d and %d \n",way_start,way_end);
     // printf("Core id l2 is %d \n",core_id_l2);
     if (m_config.perfect_L1Cache) {
         idx = 0;
@@ -150,7 +150,8 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
         idx = 0;
         return HIT;
     }
-    m_config.cache_part = 0 ;
+    m_config.cache_part = 1 ;
+
     if (m_config.cache_part) {
         unsigned threshold;
 		if(gpu_mode3 ==0)
@@ -162,20 +163,18 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
 	    if (core_id_l2 != -1) {
 			if (core_id_l2 < threshold) {  
 				way_start = 0;
-				way_end = m_config.m_assoc/gpu_groups; 
+				way_end = m_config.m_assoc; 
 			}
 			if(gpu_mode3 == 0){
 				if (core_id_l2 >= threshold) {  
-					way_start =  m_config.m_assoc/gpu_groups;;
+ 					way_start = 0;
 					way_end = m_config.m_assoc; 
- 					 //printf("Way start and end is %d and %d \n",way_start,way_end);
 				}
 				
 			}else{
 				if(core_id_l2 >= threshold  && core_id_l2 < gpu_sms -threshold) {
 					way_start = m_config.m_assoc/gpu_groups;
-					way_end = 2 * m_config.m_assoc/gpu_groups; 
-				
+					way_end = 2 * m_config.m_assoc/gpu_groups; 				
 				}
 				else{ 
 					way_start = 2* m_config.m_assoc/gpu_groups; 
@@ -200,7 +199,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
     // check for hit or pending hit
     //for (unsigned way=0; way<m_config.m_assoc; way++) {
       
-	for (unsigned way=way_start; way<way_end; way++) { //new
+	for (unsigned way=0; way<8; way++) { //new
         unsigned index = set_index*m_config.m_assoc+way;
         cache_block_t *line = &m_lines[index];
         if (line->m_tag == tag) {

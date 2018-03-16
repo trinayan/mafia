@@ -94,7 +94,7 @@ else
 	CUTIL:=cutil_i386
 endif
 INTERMED_FILES := *.cpp*.i *.cpp*.ii *.cu.c *.cudafe*.* *.fatbin.c *.cu.cpp *.linkinfo *.cpp_o core
-GCC_VERSION ?= gcc-4.4.6
+GCC_VERSION ?= gcc-4.4.7
 
 SIM_OBJDIR := 
 SIM_OBJS +=  $(patsubst %.cpp,$(SIM_OBJDIR)%.cpp_o,$(CCFILES))

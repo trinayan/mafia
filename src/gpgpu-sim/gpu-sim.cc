@@ -1712,6 +1712,12 @@ void gpgpu_sim::cycle()
 	if (m_memory_config->gpu_app == 0) { // normal execution (no -- streams)
 		        if (m_config.gpu_max_insn_opt && ((gpu_sim_insn_1 >= m_config.gpu_max_insn_opt)) ) {
 			        max_insn_struck = true;
+                                print_stats();
+        			output = freopen("stream1.txt", "a", file1);
+                                gpu_print_stat_file(output);
+  				fflush(output);
+ 				fclose(output);
+                                abort();
                 }
 	}
 
