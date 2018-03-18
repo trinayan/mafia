@@ -183,7 +183,8 @@ public:
    float periodic_miss_rate_3(unsigned long long);
    float periodic_mpki_core( unsigned long long insn_data[], unsigned which_core);
    unsigned get_misses_core(unsigned which_core);
-   
+   unsigned get_misses_core_periodic(unsigned which_core);
+
    float miss_rate;
    float miss_rate_1;
    float miss_rate_2;

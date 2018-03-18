@@ -80,6 +80,8 @@ class  gpgpu_sim_wrapper {};
 extern FILE *file1;
 extern FILE *file2;
 extern FILE *file3;
+extern FILE *file4;
+extern FILE *file5;
 bool g_interactive_debugger_enabled=false;
 
 
@@ -123,8 +125,8 @@ int my_active_sms = 0;
 
 #define MEM_LATENCY_STAT_IMPL
 
-
-
+//Trinayan: Global variables for warp limiter
+unsigned int culprit = 0;
 
 #include "mem_latency_stat.h"
 
@@ -620,6 +622,13 @@ gpgpu_sim::gpgpu_sim( const gpgpu_sim_config &config )
     gpu_sim_insn_1 = 0;
     gpu_sim_insn_2 = 0;
 	gpu_sim_insn_3 = 0;
+    gpu_sim_insn_1_prev = 0;
+    gpu_sim_insn_2_prev = 0;
+    gpu_stall_dram_full_curr=0;
+    gpu_stall_dram_full_prev=0;
+    gpu_stall_icnt_full_curr=0;
+    gpu_stall_icnt_full_prev=0;
+
 	
 	max_insn_struck = false; // important
 	for (unsigned i=0;i<m_config.num_shader();i++)  {
@@ -1537,7 +1546,92 @@ void gpgpu_sim::cycle()
           asm("int $03");
       }
       gpu_sim_cycle++;
-	  
+
+	  if(gpu_sim_cycle % 10000 == 0)
+      {
+
+          //Trinayan: Start Check MPKI
+          unsigned long long int  current_insn_1 = get_gpu_insn(1);
+          unsigned long long int  current_insn_2 = get_gpu_insn(2);
+
+          unsigned long long int difference_insn_1 = current_insn_1 - gpu_sim_insn_1_prev;
+          unsigned long long int difference_insn_2 = current_insn_2 - gpu_sim_insn_2_prev;
+
+          gpu_sim_insn_1_prev = current_insn_1;
+          gpu_sim_insn_2_prev = current_insn_2;
+
+
+          unsigned i, j, k;
+          unsigned a_s1, m_s1;
+          unsigned a_s2, m_s2;
+          unsigned a_s3, m_s3;
+
+          a_s1 = 0;
+          m_s1 = 0;
+          a_s2 = 0;
+          m_s2 = 0;
+          a_s3 = 0;
+          m_s3 = 0;
+
+          for (i=0,j=0,k=0;i<m_memory_config->m_n_mem_sub_partition;i++) {
+              m_memory_sub_partition[i]->print_cache_stat(k,j, a_s1, m_s1, a_s2, m_s2, a_s3, m_s3, stdout);
+          }
+
+          unsigned long misses_core_periodic[64];
+
+          for (int j=0; j<gpu_sms; j++) {
+              misses_core_periodic[j] = 0;
+          }
+
+          for (int j=0; j<gpu_sms; j++) {
+              for (int i =0 ;i<m_memory_config->m_n_mem_sub_partition;i++) {
+                  misses_core_periodic[j] += m_memory_sub_partition[i]->get_misses_core_periodic(j);
+              }
+          }
+
+
+          float sum1 = 0;
+          float sum2 = 0;
+
+          for (int j=0; j<gpu_sms_app1; j++) {
+              sum1 = sum1 +  misses_core_periodic[j];
+          }
+          for (int j=gpu_sms_app1; j<gpu_sms; j++) {
+              sum2 = sum2 +  misses_core_periodic[j];
+          }
+
+          float mpki_1 = (float)sum1/difference_insn_1*1000;
+          float mpki_2 = (float)sum2/difference_insn_2*1000;
+
+          output = freopen("periodic_mpki.txt", "a", file4);
+          fprintf(output, "MPKI_1 = %f and MPKI_2=%f at Cycle %d \n",mpki_1,mpki_2,gpu_sim_cycle);
+          fflush(output);
+          fclose(output);
+          //Trinayan: End Check MPKI
+
+          //Trinayan: Calculate impact of culprit
+          unsigned int gpu_stall_dram_full_diff =  gpu_stall_dramfull - gpu_stall_dram_full_prev;
+          unsigned int gpu_stall_icnt_full_diff =  gpu_stall_icnt2sh - gpu_stall_icnt_full_prev;
+
+
+          gpu_stall_dram_full_prev = gpu_stall_dramfull;
+          gpu_stall_icnt_full_prev = gpu_stall_icnt2sh;
+
+          output = freopen("periodic_dram_icnt_stall.txt","a",file5);
+          fprintf(output, "DRAM stall = %d and ICNT Stall = %d at Cycle %d \n",gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,gpu_sim_cycle);
+          fflush(output);
+          fclose(output);
+          //Trinayan: End impact calculation
+
+          //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high
+          if(mpki_1 > mpki_2) {
+              culprit = 1;
+              }
+          else if(mpki_1 < mpki_2) {
+             culprit =  2;
+          }
+
+      }
 	  
       // new
       unsigned threshold;

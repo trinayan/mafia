@@ -56,6 +56,10 @@ extern int gpu_sms;
 extern int gpu_groups;
 extern int gpu_sms_app1;
 
+//Trinayan : New variables
+extern int culprit;
+unsigned long num_warps_to_limit_multitasking = 48;
+
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -764,6 +768,34 @@ void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t*
 
 void shader_core_ctx::issue(){
     //really is issue;
+
+    /*if(culprit == 1)
+    {
+        for (unsigned i = 0; i < 30; i++) {
+            if(num_warps_to_limit_multitasking > 8)
+                num_warps_to_limit_multitasking = num_warps_to_limit_multitasking - 4;
+            schedulers[i]->cycle();
+        }
+
+        for (unsigned i = 30; i < 60; i++) {
+            schedulers[i]->cycle();
+        }
+
+    }
+
+    else if(culprit == 2)
+    {
+        for (unsigned i = 30; i < 60; i++) {
+            if(num_warps_to_limit_multitasking > 8)
+                num_warps_to_limit_multitasking = num_warps_to_limit_multitasking - 4;
+            schedulers[i]->cycle();
+        }
+        for (unsigned i = 0; i < 30; i++) {
+            schedulers[i]->cycle();
+        }
+
+    }*/
+
     for (unsigned i = 0; i < schedulers.size(); i++) {
         schedulers[i]->cycle();
     }
@@ -1175,11 +1207,12 @@ swl_scheduler::swl_scheduler ( shader_core_stats* stats, shader_core_ctx* shader
 
 void swl_scheduler::order_warps()
 {
+    //Trinayan: Changed code to use global variable for limiting number of warpss
     if ( SCHEDULER_PRIORITIZATION_GTO == m_prioritization ) {
         order_by_priority( m_next_cycle_prioritized_warps,
                            m_supervised_warps,
                            m_last_supervised_issued,
-                           MIN( m_num_warps_to_limit, m_supervised_warps.size() ),
+                           MIN( num_warps_to_limit_multitasking, m_supervised_warps.size() ),
                            ORDERING_GREEDY_THEN_PRIORITY_FUNC,
                            scheduler_unit::sort_warps_by_oldest_dynamic_id );
     } else {
@@ -3252,6 +3285,7 @@ simt_core_cluster::simt_core_cluster( class gpgpu_sim *gpu,
     m_stats = stats;
     m_memory_stats = mstats;
     m_core = new shader_core_ctx*[ config->n_simt_cores_per_cluster ];
+
     for( unsigned i=0; i < config->n_simt_cores_per_cluster; i++ ) {
         unsigned sid = m_config->cid_to_sid(i,m_cluster_id);
         m_core[i] = new shader_core_ctx(gpu,this,sid,m_cluster_id,config,mem_config,stats);
@@ -3493,6 +3527,11 @@ void simt_core_cluster::get_icnt_stats(long &n_simt_to_mem, long &n_mem_to_simt)
 	}
 	n_simt_to_mem = simt_to_mem;
 	n_mem_to_simt = mem_to_simt;
+}
+
+
+unsigned int simt_core_cluster::get_cluster_id(int id) {
+    return m_cluster_id;
 }
 
 void simt_core_cluster::get_cache_stats(cache_stats &cs) const{

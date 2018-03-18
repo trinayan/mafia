@@ -1875,6 +1875,7 @@ public:
     void get_L1T_sub_stats(struct cache_sub_stats &css ) const;
 
     void get_icnt_stats(long &n_simt_to_mem, long &n_mem_to_simt) const;
+    unsigned int get_cluster_id(int id);
 
 private:
     unsigned m_cluster_id;

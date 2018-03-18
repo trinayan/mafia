@@ -800,6 +800,21 @@ unsigned memory_sub_partition::get_misses_core(unsigned which_core)
 	return misses;
 }
 
+unsigned memory_sub_partition::get_misses_core_periodic(unsigned which_core)
+{
+    unsigned accesses = 0;
+    unsigned misses = 0;
+
+    if( !m_config->m_L2_config.disabled() ) {
+        m_L2cache->get_missr_core(accesses,misses,which_core);
+    }
+
+    return misses;
+}
+
+
+
+
 float memory_sub_partition::periodic_mpki_core( unsigned long long insn_data[], unsigned which_core)
 { 
 	unsigned accesses;

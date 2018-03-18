@@ -519,7 +519,17 @@ public:
    unsigned long long  gpu_sim_insn_1;
    unsigned long long  gpu_sim_insn_2;
    unsigned long long  gpu_sim_insn_3;
-   
+
+   //Trinayan code for periodic MPKI
+   unsigned long long gpu_sim_insn_1_prev;
+    unsigned long long gpu_sim_insn_2_prev;
+
+    //Trinayan code for contention finder
+    unsigned int gpu_stall_dram_full_prev;
+    unsigned int gpu_stall_icnt_full_prev;
+    unsigned int gpu_stall_dram_full_curr;
+    unsigned int gpu_stall_icnt_full_curr;
+
    unsigned long long  gpu_sim_insn_per_core[1000]; //why 1000
    
    
