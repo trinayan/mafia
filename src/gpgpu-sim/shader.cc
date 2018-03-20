@@ -60,6 +60,8 @@ extern int gpu_sms_app1;
 extern int culprit;
 unsigned long num_warps_to_limit_multitasking = 48;
 
+int num_warps_app1 = 24;
+int num_warps_app2 = 24;
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -769,36 +771,73 @@ void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t*
 void shader_core_ctx::issue(){
     //really is issue;
 
-    /*if(culprit == 1)
+  /*if(culprit == 1)
     {
-        for (unsigned i = 0; i < 30; i++) {
-            if(num_warps_to_limit_multitasking > 8)
-                num_warps_to_limit_multitasking = num_warps_to_limit_multitasking - 4;
-            schedulers[i]->cycle();
-        }
+	if(this->get_sid() < 15) {
 
-        for (unsigned i = 30; i < 60; i++) {
-            schedulers[i]->cycle();
-        }
+             if(num_warps_app1 > 2) {
+               if(this->get_sid() == 0)
+		  num_warps_app1 = num_warps_app1 - 2;
+             }
+             for (unsigned i = 0; i < schedulers.size(); i++) 
+        		schedulers[i]->cycle(num_warps_app1);
+           }    
+           
+          else if (this->get_sid() >= 15) {
+               if(num_warps_app2 < 24) {
+                  if(this->get_sid() == 15)
+		      num_warps_app2 = num_warps_app2 + 2;	
+             } 
+            for (unsigned i = 0; i < schedulers.size(); i++) 
+                        schedulers[i]->cycle(num_warps_app2);  
+          }
+      }
 
+   else if(culprit == 2)
+   {
+       if(this->get_sid() >= 15) {
+
+             if(num_warps_app2 > 4) {
+               if(this->get_sid() == 15)
+                  num_warps_app2 = num_warps_app2 - 2;
+             }
+             for (unsigned i = 0; i < schedulers.size(); i++) 
+                        schedulers[i]->cycle(num_warps_app2);
+           } 
+   
+          else if (this->get_sid() < 15) {
+               if(num_warps_app1 < 24) {
+                  if(this->get_sid() == 0)
+                      num_warps_app1 = num_warps_app1 + 2;
+             }
+            for (unsigned i = 0; i < schedulers.size(); i++)
+                        schedulers[i]->cycle(num_warps_app1);
+         }
     }
 
-    else if(culprit == 2)
-    {
-        for (unsigned i = 30; i < 60; i++) {
-            if(num_warps_to_limit_multitasking > 8)
-                num_warps_to_limit_multitasking = num_warps_to_limit_multitasking - 4;
-            schedulers[i]->cycle();
-        }
-        for (unsigned i = 0; i < 30; i++) {
-            schedulers[i]->cycle();
-        }
+   if(culprit == 0)
+   {
 
-    }*/
-
+  if(this->get_sid() < 15) {
     for (unsigned i = 0; i < schedulers.size(); i++) {
-        schedulers[i]->cycle();
+        schedulers[i]->cycle(num_warps_app1);
     }
+    }
+
+   else if(this->get_sid() >= 15) {
+      for (unsigned i = 0; i < schedulers.size(); i++) {
+        schedulers[i]->cycle(num_warps_app2);
+    }
+   }
+   }*/
+  //culprit = 0;*/
+
+  for (unsigned i = 0; i < schedulers.size(); i++) {
+
+		schedulers[i]->cycle(24);
+	}
+
+  
 }
 
 shd_warp_t& scheduler_unit::warp(int i){
@@ -866,6 +905,7 @@ void scheduler_unit::order_by_priority( std::vector< T >& result_list,
                                         OrderingType ordering,
                                         bool (*priority_func)(T lhs, T rhs) )
 {
+    //printf("Number of warps is %d \n", num_warps_to_add);
     assert( num_warps_to_add <= input_list.size() );
     result_list.clear();
     typename std::vector< T > temp = input_list;
@@ -875,7 +915,7 @@ void scheduler_unit::order_by_priority( std::vector< T >& result_list,
         result_list.push_back( greedy_value );
 
         std::sort( temp.begin(), temp.end(), priority_func );
-        typename std::vector< T >::iterator iter = temp.begin();
+        typename std::vector< T >::iterator iter = temp.begin(); 
         for ( unsigned count = 0; count < num_warps_to_add; ++count, ++iter ) {
             if ( *iter != greedy_value ) {
                 result_list.push_back( *iter );
@@ -884,6 +924,7 @@ void scheduler_unit::order_by_priority( std::vector< T >& result_list,
     } else if ( ORDERED_PRIORITY_FUNC_ONLY == ordering ) {
         std::sort( temp.begin(), temp.end(), priority_func );
         typename std::vector< T >::iterator iter = temp.begin();
+        printf("Number of warps is %d \n", num_warps_to_add);
         for ( unsigned count = 0; count < num_warps_to_add; ++count, ++iter ) {
             result_list.push_back( *iter );
         }
@@ -893,14 +934,14 @@ void scheduler_unit::order_by_priority( std::vector< T >& result_list,
     }
 }
 
-void scheduler_unit::cycle()
+void scheduler_unit::cycle(int num_warps_limit)
 {
     SCHED_DPRINTF( "scheduler_unit::cycle()\n" );
     bool valid_inst = false;  // there was one warp with a valid instruction to issue (didn't require flush due to control hazard)
     bool ready_inst = false;  // of the valid instructions, there was one not waiting for pending register writes
     bool issued_inst = false; // of these we issued one
 
-    order_warps();
+    order_warps(num_warps_limit);
     for ( std::vector< shd_warp_t* >::const_iterator iter = m_next_cycle_prioritized_warps.begin();
           iter != m_next_cycle_prioritized_warps.end();
           iter++ ) {
@@ -1096,7 +1137,7 @@ bool scheduler_unit::sort_warps_by_oldest_dynamic_id(shd_warp_t* lhs, shd_warp_t
     }
 }
 
-void lrr_scheduler::order_warps()
+void lrr_scheduler::order_warps(int num_warps_limit)
 {
     order_lrr( m_next_cycle_prioritized_warps,
                m_supervised_warps,
@@ -1104,7 +1145,7 @@ void lrr_scheduler::order_warps()
                m_supervised_warps.size() );
 }
 
-void gto_scheduler::order_warps()
+void gto_scheduler::order_warps(int num_warps_limit)
 {
     order_by_priority( m_next_cycle_prioritized_warps,
                        m_supervised_warps,
@@ -1135,7 +1176,7 @@ two_level_active_scheduler::do_on_warp_issued( unsigned warp_id,
     }
 }
 
-void two_level_active_scheduler::order_warps()
+void two_level_active_scheduler::order_warps(int num_warps_limit)
 {
     //Move waiting warps to m_pending_warps
     unsigned num_demoted = 0;
@@ -1205,14 +1246,16 @@ swl_scheduler::swl_scheduler ( shader_core_stats* stats, shader_core_ctx* shader
     assert( m_num_warps_to_limit <= shader->get_config()->max_warps_per_shader );
 }
 
-void swl_scheduler::order_warps()
+void swl_scheduler::order_warps(int num_warps_limit)
 {
-    //Trinayan: Changed code to use global variable for limiting number of warpss
+    //Trinayan: Changed code to use global variable for limiting number of warps
+
+    //printf("num warp is %d \n", num_warps_limit); 
     if ( SCHEDULER_PRIORITIZATION_GTO == m_prioritization ) {
         order_by_priority( m_next_cycle_prioritized_warps,
                            m_supervised_warps,
                            m_last_supervised_issued,
-                           MIN( num_warps_to_limit_multitasking, m_supervised_warps.size() ),
+                           MIN( num_warps_limit, m_supervised_warps.size() ),
                            ORDERING_GREEDY_THEN_PRIORITY_FUNC,
                            scheduler_unit::sort_warps_by_oldest_dynamic_id );
     } else {

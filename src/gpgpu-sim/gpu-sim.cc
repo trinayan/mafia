@@ -127,6 +127,8 @@ int my_active_sms = 0;
 
 //Trinayan: Global variables for warp limiter
 unsigned int culprit = 0;
+extern int num_warps_app1;
+extern int num_warps_app2;
 
 #include "mem_latency_stat.h"
 
@@ -1547,6 +1549,7 @@ void gpgpu_sim::cycle()
       }
       gpu_sim_cycle++;
 
+
 	  if(gpu_sim_cycle % 10000 == 0)
       {
 
@@ -1605,8 +1608,7 @@ void gpgpu_sim::cycle()
 
           output = freopen("periodic_mpki.txt", "a", file4);
           fprintf(output, "MPKI_1 = %f and MPKI_2=%f at Cycle %d \n",mpki_1,mpki_2,gpu_sim_cycle);
-          fflush(output);
-          fclose(output);
+          
           //Trinayan: End Check MPKI
 
           //Trinayan: Calculate impact of culprit
@@ -1618,9 +1620,8 @@ void gpgpu_sim::cycle()
           gpu_stall_icnt_full_prev = gpu_stall_icnt2sh;
 
           output = freopen("periodic_dram_icnt_stall.txt","a",file5);
-          fprintf(output, "DRAM stall = %d and ICNT Stall = %d at Cycle %d \n",gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,gpu_sim_cycle);
-          fflush(output);
-          fclose(output);
+          fprintf(output, "MPKI 1 = %f , MPKI 2 = %f ,Warp1 = %d and Warp2 = %d, DRAM Stall = %d, ICNT Stall = %d  at Cycle %d \n",mpki_1,mpki_2,num_warps_app1,num_warps_app2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,gpu_sim_cycle);
+         
           //Trinayan: End impact calculation
 
           //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high

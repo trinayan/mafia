@@ -307,7 +307,7 @@ public:
     // The core scheduler cycle method is meant to be common between
     // all the derived schedulers.  The scheduler's behaviour can be
     // modified by changing the contents of the m_next_cycle_prioritized_warps list.
-    void cycle();
+    void cycle(int num_warps_limit);
 
     // These are some common ordering fucntions that the
     // higher order schedulers can take advantage of
@@ -338,7 +338,7 @@ public:
 
     // Derived classes can override this function to populate
     // m_supervised_warps with their scheduling policies
-    virtual void order_warps() = 0;
+    virtual void order_warps(int num_warps_limit) = 0;
 
 protected:
     virtual void do_on_warp_issued( unsigned warp_id,
@@ -383,7 +383,7 @@ public:
                     int id )
 	: scheduler_unit ( stats, shader, scoreboard, simt, warp, sp_out, sfu_out, mem_out, id ){}
 	virtual ~lrr_scheduler () {}
-	virtual void order_warps ();
+	virtual void order_warps (int num_warps_limit);
     virtual void done_adding_supervised_warps() {
         m_last_supervised_issued = m_supervised_warps.end();
     }
@@ -400,7 +400,7 @@ public:
                     int id )
 	: scheduler_unit ( stats, shader, scoreboard, simt, warp, sp_out, sfu_out, mem_out, id ){}
 	virtual ~gto_scheduler () {}
-	virtual void order_warps ();
+	virtual void order_warps (int num_warps_limit);
     virtual void done_adding_supervised_warps() {
         m_last_supervised_issued = m_supervised_warps.begin();
     }
@@ -433,7 +433,7 @@ public:
         m_outer_level_prioritization=(scheduler_prioritization_type)outer_level_readin;
     }
 	virtual ~two_level_active_scheduler () {}
-    virtual void order_warps();
+    virtual void order_warps(int num_warps_limit);
 	void add_supervised_warp_id(int i) {
         if ( m_next_cycle_prioritized_warps.size() < m_max_active_warps ) {
             m_next_cycle_prioritized_warps.push_back( &warp(i) );
@@ -469,7 +469,7 @@ public:
                     int id,
                     char* config_string );
 	virtual ~swl_scheduler () {}
-	virtual void order_warps ();
+	virtual void order_warps (int num_warps_limit);
     virtual void done_adding_supervised_warps() {
         m_last_supervised_issued = m_supervised_warps.begin();
     }
