@@ -554,9 +554,7 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
     m_s2 = 0;
     a_s3 = 0;
     m_s3 = 0;
-    for (i=0,j=0,k=0;i<m_memory_config->m_n_mem_sub_partition;i++) {
-        m_memory_sub_partition[i]->print_cache_stat(k,j, a_s1, m_s1, a_s2, m_s2, a_s3, m_s3, fout);
-	}
+
 	
 	unsigned long misses_core[64];
 	
