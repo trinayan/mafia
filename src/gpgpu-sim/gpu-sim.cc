@@ -1026,10 +1026,10 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
    //std::string kernel_info_str = executed_kernel_info_string(); 
    //fprintf(statfout, "%s", kernel_info_str.c_str()); 
 	
-	fprintf(outputfile, "%12.4f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
-	fprintf(outputfile, "%12.4f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
+	fprintf(outputfile, "%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
+	fprintf(outputfile, "%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
 
-   fprintf(outputfile, "%12.4f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
+   fprintf(outputfile, "%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
 
    // performance counter for stalls due to congestion.
    fprintf(outputfile, "%d,", gpu_stall_dramfull);

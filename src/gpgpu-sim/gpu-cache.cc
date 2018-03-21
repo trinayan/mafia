@@ -493,10 +493,10 @@ void tag_array::get_misses_cum_core(unsigned &total_access_core, unsigned &total
 
 void tag_array::print( FILE *stream, unsigned &total_access, unsigned &total_misses ) const
 {
-    m_config.print(stream);
+   /* m_config.print(stream);
     fprintf( stream, "\t\tAccess = %d, Miss = %d (%.3g), PendingHit = %d (%.3g)\n", 
              m_access, m_miss, (float) m_miss / m_access, 
-             m_pending_hit, (float) m_pending_hit / m_access);
+             m_pending_hit, (float) m_pending_hit / m_access);*/
     total_misses+=m_miss;
     total_access+=m_access;
 }
@@ -949,7 +949,6 @@ bool baseline_cache::waiting_for_fill( mem_fetch *mf ){
 
 
 void baseline_cache::print(FILE *fp, unsigned &accesses, unsigned &misses, unsigned &accesses_s1, unsigned &misses_s1, unsigned &accesses_s2, unsigned &misses_s2, unsigned &accesses_s3, unsigned &misses_s3) const{
-    fprintf( fp, "Cache %s:\t", m_name.c_str() );
     m_tag_array->print(fp,accesses,misses, accesses_s1, misses_s1, accesses_s2, misses_s2, accesses_s3, misses_s3);
 }
 

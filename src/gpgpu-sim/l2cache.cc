@@ -555,6 +555,9 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
     a_s3 = 0;
     m_s3 = 0;
 
+    for (i=0,j=0,k=0;i<m_memory_config->m_n_mem_sub_partition;i++) {
+        m_memory_sub_partition[i]->print_cache_stat(k,j, a_s1, m_s1, a_s2, m_s2, a_s3, m_s3, fout);
+    }
 	
 	unsigned long misses_core[64];
 	
@@ -569,8 +572,8 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
 	}
 	
 
-    fprintf(fout, "%0.3f", (float)m_s1/a_s1);
-    fprintf(fout, "%0.3f", (float)m_s2/a_s2);
+    fprintf(fout, "%f", (float)m_s1/a_s1);
+    fprintf(fout, "%f", (float)m_s2/a_s2);
 
 
 	
@@ -600,8 +603,8 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
 			sum2 = sum2 + (float) misses_core[j]*1000/gpu_sim_insn_per_core[j];	
 		}
 		
-		fprintf(fout, "%4.3f", (float) sum1/ gpu_sms_app1);
-		fprintf(fout, "%4.3f", (float) sum2/ (gpu_sms- gpu_sms_app1));
+		fprintf(fout, "%f,", (float) sum1/ gpu_sms_app1);
+		fprintf(fout, "%f,", (float) sum2/ (gpu_sms- gpu_sms_app1));
 	}
 
 }
@@ -611,7 +614,7 @@ void gpgpu_sim::L2c_print_cache_stat_periodic(unsigned long long gpu_ins, unsign
     unsigned i, j, k;
     unsigned a_s1, m_s1;
     unsigned a_s2, m_s2;
-	unsigned a_s3, m_s3;
+    unsigned a_s3, m_s3;
     a_s1 = 0;
     m_s1 = 0;
     a_s2 = 0;
