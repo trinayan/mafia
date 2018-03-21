@@ -570,34 +570,16 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
 		}
 	}
 	
-    fprintf(fout, "L2 Cache Total Miss Rate = %0.3f\n", (float)j/k);
-    fprintf(fout, "Stream 1: L2 Cache Miss Rate = %0.3f\n", (float)m_s1/a_s1);
-    fprintf(fout, "Stream 2: L2 Cache Miss Rate = %0.3f\n", (float)m_s2/a_s2);
-	if(gpu_mode3)
-		fprintf(fout, "Stream 3: L2 Cache Miss Rate = %0.3f\n", (float)m_s3/a_s3);
-    fprintf(fout, "Stream 1: Accesses  = %d\n", a_s1);
-    fprintf(fout, "Stream 1: Misses  = %d\n", m_s1);
-    fprintf(fout, "Stream 2: Accesses  = %d\n", a_s2);
-    fprintf(fout, "Stream 2: Misses  = %d\n", m_s2);
-	if(gpu_mode3){
-    	fprintf(fout, "Stream 3: Accesses  = %d\n", a_s3);
-    	fprintf(fout, "Stream 3: Misses  = %d\n", m_s3);
-	}
-    fprintf(fout, "Stream 1+2: Accesses  = %d\n", a_s1+a_s2);
-    fprintf(fout, "Stream 1+2: Misses  = %d\n", m_s1+m_s2);
-	if(gpu_mode3){
-    	fprintf(fout, "Stream 1+2+3: Accesses  = %d\n", a_s1+a_s2+a_s3);
-    	fprintf(fout, "Stream 1+2+3: Misses  = %d\n", m_s1+m_s2+ m_s3);
-	}
-    fprintf(fout, "Total Accesses  = %d\n", k);
+
+    fprintf(fout, "%0.3f", (float)m_s1/a_s1);
+    fprintf(fout, "%0.3f", (float)m_s2/a_s2);
+
+
 	
 	float sum1 = 0;
 	float sum2 = 0;
 	float sum3 = 0;
-	fprintf(fout, "MPKI-CORES\n");
-	for (int j=0; j<gpu_sms; j++) {
-		fprintf(fout, "CORE_L2MPKI_%d\t%4.3f\n", j, (float) misses_core[j]*1000/gpu_sim_insn_per_core[j]);
-	}
+
 	if(gpu_mode3){
 		for (int j=0; j<gpu_sms/3; j++) {
 			sum1 = sum1 + (float) misses_core[j]*1000/gpu_sim_insn_per_core[j];	
@@ -620,30 +602,10 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
 			sum2 = sum2 + (float) misses_core[j]*1000/gpu_sim_insn_per_core[j];	
 		}
 		
-		fprintf(fout, "Avg_MPKI_Stream1= %4.3f\n", (float) sum1/ gpu_sms_app1);
-		fprintf(fout, "Avg_MPKI_Stream2= %4.3f\n", (float) sum2/ (gpu_sms- gpu_sms_app1));
+		fprintf(fout, "%4.3f", (float) sum1/ gpu_sms_app1);
+		fprintf(fout, "%4.3f", (float) sum2/ (gpu_sms- gpu_sms_app1));
 	}
 
-	/*unsigned long total_misses_insn = 0;
-    unsigned long total_ctas = 0;
-	fprintf(fout, "INSN-CORES\n");
-	for (int j=0; j<gpu_sms; j++) {
-		fprintf(fout, "CORE_INSN_%d\t%lld(%d)\n", j, gpu_sim_insn_per_core[j],m_cluster[j]->get_num_ctas_executed());
-		total_misses_insn += gpu_sim_insn_per_core[j];
-        total_ctas += m_cluster[j]->get_num_ctas_executed();
-	}*/
-	
-	unsigned long total_misses_core = 0;
-	
-	fprintf(fout, "MISSES-CORES\n");
-	for (int j=0; j<gpu_sms; j++) {
-		fprintf(fout, "CORE_MISSES_%d\t%ld\n", j, misses_core[j]);
-		total_misses_core += misses_core[j];
-	}	
-	
-	fprintf(fout, "L2_MISSES = %ld\n", total_misses_core);
-	//fprintf(fout, "TOTAL_INSN = %ld\n", total_misses_insn);
-    //fprintf(fout, "TOTAL_CTAs = %ld\n", total_ctas);
 }
 
 void gpgpu_sim::L2c_print_cache_stat_periodic(unsigned long long gpu_ins, unsigned long long gpu_ins_1, unsigned long long gpu_ins_2, unsigned long long gpu_ins_3) const

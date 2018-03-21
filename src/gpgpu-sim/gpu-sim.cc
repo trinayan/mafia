@@ -1026,59 +1026,16 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
    //std::string kernel_info_str = executed_kernel_info_string(); 
    //fprintf(statfout, "%s", kernel_info_str.c_str()); 
 	
-	fprintf(outputfile, "gpu_ipc_1 = %12.4f\n", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
-	fprintf(outputfile, "gpu_ipc_2 = %12.4f\n", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
-	if(gpu_mode3)
-		fprintf(outputfile, "gpu_ipc_3 = %12.4f\n", (float)gpu_sim_insn_3 / gpu_tot_sim_cycle_stream_3);
-//	fprintf(outputfile, "gpu_tot_sim_cycle_stream_1 = %lld\n", gpu_tot_sim_cycle_stream_1);
-//	fprintf(outputfile, "gpu_tot_sim_cycle_stream_2 = %lld\n", gpu_tot_sim_cycle_stream_2);
-	if(gpu_mode3)
-		fprintf(outputfile, "gpu_tot_sim_cycle_stream_3 = %lld\n", gpu_tot_sim_cycle_stream_3);
-//	fprintf(outputfile, "gpu_sim_insn_1 = %lld\n", gpu_sim_insn_1);
-//	fprintf(outputfile, "gpu_sim_insn_2 = %lld\n", gpu_sim_insn_2);
-	if(gpu_mode3)
-		fprintf(outputfile, "gpu_sim_insn_3 = %lld\n", gpu_sim_insn_3);
+	fprintf(outputfile, "%12.4f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
+	fprintf(outputfile, "%12.4f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
 
-  // fprintf(outputfile, "gpu_sim_cycle = %lld\n", gpu_sim_cycle);
-   //fprintf(outputfile, "gpu_sim_insn = %lld\n", gpu_sim_insn);
-   //fprintf(outputfile, "gpu_ipc = %12.4f\n", (float)gpu_sim_insn / gpu_sim_cycle);
-  // fprintf(outputfile, "gpu_tot_sim_cycle = %lld\n", gpu_tot_sim_cycle+gpu_sim_cycle);
-   //fprintf(outputfile, "gpu_tot_sim_insn = %lld\n", gpu_tot_sim_insn+gpu_sim_insn);
-   fprintf(outputfile, "gpu_tot_ipc = %12.4f\n", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
-   //fprintf(outputfile, "gpu_tot_issued_cta = %lld\n", gpu_tot_issued_cta);
-
-
+   fprintf(outputfile, "%12.4f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
 
    // performance counter for stalls due to congestion.
-   fprintf(outputfile, "gpu_stall_dramfull = %d\n", gpu_stall_dramfull);
-   fprintf(outputfile, "gpu_stall_icnt2sh    = %d\n", gpu_stall_icnt2sh );
+   fprintf(outputfile, "%d,", gpu_stall_dramfull);
+   fprintf(outputfile, "%d,", gpu_stall_icnt2sh );
 
-   //shader_print_l1_miss_stat( stdout );
-   //shader_print_cache_stats(outputfile);
 
-   //cache_stats core_cache_stats;
-   //core_cache_stats.clear();
-   for(unsigned i=0; i<m_config.num_cluster(); i++){
-       m_cluster[i]->get_cache_stats(core_cache_stats);
-   }
-   //fprintf(outputfile, "\nTotal_core_cache_stats:\n");
-   //core_cache_stats.print_stats(outputfile, "Total_core_cache_stats_breakdown");
-   //shader_print_scheduler_stat( outputfile, false );
-
-   //m_shader_stats->print(outputfile);
-#ifdef GPGPUSIM_POWER_MODEL
-   if(m_config.g_power_simulation_enabled){
-	   //m_gpgpusim_wrapper->print_power_kernel_stats(gpu_sim_cycle, gpu_tot_sim_cycle, gpu_tot_sim_insn + gpu_sim_insn, kernel_info_str, true );
-	   //mcpat_reset_perf_count(m_gpgpusim_wrapper);
-   }
-#endif
-
-   // performance counter that are not local to one shader
-   //m_memory_stats->memlatstat_print_file(m_memory_config->m_n_mem,m_memory_config->nbk, outputfile);
-   //for (unsigned i=0;i<m_memory_config->m_n_mem;i++)
-     // m_memory_partition_unit[i]->print(outputfile);
-
-   // L2 cache stats
    if(!m_memory_config->m_L2_config.disabled()){
        cache_stats l2_stats;
        struct cache_sub_stats l2_css;
@@ -1087,58 +1044,19 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
        l2_css.clear();
        total_l2_css.clear();
 
-       fprintf(outputfile,"\n========= L2 cache stats =========\n");
        for (unsigned i=0;i<m_memory_config->m_n_mem_sub_partition;i++){
            m_memory_sub_partition[i]->accumulate_L2cache_stats(l2_stats);
            m_memory_sub_partition[i]->get_L2cache_sub_stats(l2_css);
-
-           fprintf( outputfile, "L2_cache_bank[%d]: Access = %u, Miss = %u, Miss_rate = %.3lf, Pending_hits = %u, Reservation_fails = %u\n",
-                    i, l2_css.accesses, l2_css.misses, (double)l2_css.misses / (double)l2_css.accesses, l2_css.pending_hits, l2_css.res_fails);
 
            total_l2_css += l2_css;
        }
        if (!m_memory_config->m_L2_config.disabled() && m_memory_config->m_L2_config.get_num_lines()) {
 		  L2c_print_cache_stat(outputfile);
-          fprintf(outputfile, "L2_total_cache_accesses = %u\n", total_l2_css.accesses);
-          fprintf(outputfile, "L2_total_cache_misses = %u\n", total_l2_css.misses);
-          if(total_l2_css.accesses > 0)
-              fprintf( outputfile, "L2_total_cache_miss_rate = %.4lf\n", (double)total_l2_css.misses/(double)total_l2_css.accesses);
-          fprintf(outputfile, "L2_total_cache_pending_hits = %u\n", total_l2_css.pending_hits);
-          fprintf(outputfile, "L2_total_cache_reservation_fails = %u\n", total_l2_css.res_fails);
-          fprintf(outputfile, "L2_total_cache_breakdown:\n");
-          l2_stats.print_stats(outputfile, "L2_cache_stats_breakdown");
-          total_l2_css.print_port_stats(outputfile, "L2_cache");
+
        }
    }
 
-   if (m_config.gpgpu_cflog_interval != 0) {
-      spill_log_to_file (outputfile, 1, gpu_sim_cycle);
-      insn_warp_occ_print(outputfile);
-   }
-   if ( gpgpu_ptx_instruction_classification ) {
-      StatDisp( g_inst_classification_stat[g_ptx_kernel_count]);
-      StatDisp( g_inst_op_classification_stat[g_ptx_kernel_count]);
-   }
 
-#ifdef GPGPUSIM_POWER_MODEL
-   if(m_config.g_power_simulation_enabled){
-       //m_gpgpusim_wrapper->detect_print_steady_state(1,gpu_tot_sim_insn+gpu_sim_insn);
-   }
-#endif
-
-
-   // Interconnect power stat print
-   long total_simt_to_mem=0;
-   long total_mem_to_simt=0;
-   long temp_stm=0;
-   long temp_mts = 0;
-   for(unsigned i=0; i<m_config.num_cluster(); i++){
-	   m_cluster[i]->get_icnt_stats(temp_stm, temp_mts);
-	   total_simt_to_mem += temp_stm;
-	   total_mem_to_simt += temp_mts;
-   }
-   fprintf(outputfile, "\nicnt_total_pkts_mem_to_simt=%ld\n", total_mem_to_simt);
-   fprintf(outputfile, "icnt_total_pkts_simt_to_mem=%ld\n", total_simt_to_mem);
 
    //time_vector_print();
    //fflush(stdout);
