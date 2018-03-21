@@ -1030,22 +1030,22 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
 	fprintf(outputfile, "gpu_ipc_2 = %12.4f\n", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
 	if(gpu_mode3)
 		fprintf(outputfile, "gpu_ipc_3 = %12.4f\n", (float)gpu_sim_insn_3 / gpu_tot_sim_cycle_stream_3);
-	fprintf(outputfile, "gpu_tot_sim_cycle_stream_1 = %lld\n", gpu_tot_sim_cycle_stream_1);
-	fprintf(outputfile, "gpu_tot_sim_cycle_stream_2 = %lld\n", gpu_tot_sim_cycle_stream_2);
+//	fprintf(outputfile, "gpu_tot_sim_cycle_stream_1 = %lld\n", gpu_tot_sim_cycle_stream_1);
+//	fprintf(outputfile, "gpu_tot_sim_cycle_stream_2 = %lld\n", gpu_tot_sim_cycle_stream_2);
 	if(gpu_mode3)
 		fprintf(outputfile, "gpu_tot_sim_cycle_stream_3 = %lld\n", gpu_tot_sim_cycle_stream_3);
-	fprintf(outputfile, "gpu_sim_insn_1 = %lld\n", gpu_sim_insn_1);
-	fprintf(outputfile, "gpu_sim_insn_2 = %lld\n", gpu_sim_insn_2);
+//	fprintf(outputfile, "gpu_sim_insn_1 = %lld\n", gpu_sim_insn_1);
+//	fprintf(outputfile, "gpu_sim_insn_2 = %lld\n", gpu_sim_insn_2);
 	if(gpu_mode3)
 		fprintf(outputfile, "gpu_sim_insn_3 = %lld\n", gpu_sim_insn_3);
 
-   fprintf(outputfile, "gpu_sim_cycle = %lld\n", gpu_sim_cycle);
-   fprintf(outputfile, "gpu_sim_insn = %lld\n", gpu_sim_insn);
-   fprintf(outputfile, "gpu_ipc = %12.4f\n", (float)gpu_sim_insn / gpu_sim_cycle);
-   fprintf(outputfile, "gpu_tot_sim_cycle = %lld\n", gpu_tot_sim_cycle+gpu_sim_cycle);
-   fprintf(outputfile, "gpu_tot_sim_insn = %lld\n", gpu_tot_sim_insn+gpu_sim_insn);
+  // fprintf(outputfile, "gpu_sim_cycle = %lld\n", gpu_sim_cycle);
+   //fprintf(outputfile, "gpu_sim_insn = %lld\n", gpu_sim_insn);
+   //fprintf(outputfile, "gpu_ipc = %12.4f\n", (float)gpu_sim_insn / gpu_sim_cycle);
+  // fprintf(outputfile, "gpu_tot_sim_cycle = %lld\n", gpu_tot_sim_cycle+gpu_sim_cycle);
+   //fprintf(outputfile, "gpu_tot_sim_insn = %lld\n", gpu_tot_sim_insn+gpu_sim_insn);
    fprintf(outputfile, "gpu_tot_ipc = %12.4f\n", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
-   fprintf(outputfile, "gpu_tot_issued_cta = %lld\n", gpu_tot_issued_cta);
+   //fprintf(outputfile, "gpu_tot_issued_cta = %lld\n", gpu_tot_issued_cta);
 
 
 
@@ -1053,24 +1053,19 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
    fprintf(outputfile, "gpu_stall_dramfull = %d\n", gpu_stall_dramfull);
    fprintf(outputfile, "gpu_stall_icnt2sh    = %d\n", gpu_stall_icnt2sh );
 
-   time_t curr_time;
-   time(&curr_time);
-   unsigned long long elapsed_time = MAX( curr_time - g_simulation_starttime, 1 );
-   fprintf( outputfile, "gpu_total_sim_rate=%u\n", (unsigned)( ( gpu_tot_sim_insn + gpu_sim_insn ) / elapsed_time ) );
-
    //shader_print_l1_miss_stat( stdout );
-   shader_print_cache_stats(outputfile);
+   //shader_print_cache_stats(outputfile);
 
-   cache_stats core_cache_stats;
-   core_cache_stats.clear();
+   //cache_stats core_cache_stats;
+   //core_cache_stats.clear();
    for(unsigned i=0; i<m_config.num_cluster(); i++){
        m_cluster[i]->get_cache_stats(core_cache_stats);
    }
-   fprintf(outputfile, "\nTotal_core_cache_stats:\n");
-   core_cache_stats.print_stats(outputfile, "Total_core_cache_stats_breakdown");
-   shader_print_scheduler_stat( outputfile, false );
+   //fprintf(outputfile, "\nTotal_core_cache_stats:\n");
+   //core_cache_stats.print_stats(outputfile, "Total_core_cache_stats_breakdown");
+   //shader_print_scheduler_stat( outputfile, false );
 
-   m_shader_stats->print(outputfile);
+   //m_shader_stats->print(outputfile);
 #ifdef GPGPUSIM_POWER_MODEL
    if(m_config.g_power_simulation_enabled){
 	   //m_gpgpusim_wrapper->print_power_kernel_stats(gpu_sim_cycle, gpu_tot_sim_cycle, gpu_tot_sim_insn + gpu_sim_insn, kernel_info_str, true );
@@ -1079,9 +1074,9 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
 #endif
 
    // performance counter that are not local to one shader
-   m_memory_stats->memlatstat_print_file(m_memory_config->m_n_mem,m_memory_config->nbk, outputfile);
-   for (unsigned i=0;i<m_memory_config->m_n_mem;i++)
-      m_memory_partition_unit[i]->print(outputfile);
+   //m_memory_stats->memlatstat_print_file(m_memory_config->m_n_mem,m_memory_config->nbk, outputfile);
+   //for (unsigned i=0;i<m_memory_config->m_n_mem;i++)
+     // m_memory_partition_unit[i]->print(outputfile);
 
    // L2 cache stats
    if(!m_memory_config->m_L2_config.disabled()){
