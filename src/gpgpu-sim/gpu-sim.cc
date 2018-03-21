@@ -1550,7 +1550,7 @@ void gpgpu_sim::cycle()
       gpu_sim_cycle++;
 
 
-	  if(gpu_sim_cycle % 10000 == 0)
+	  if(gpu_sim_cycle % 512 == 0)
       {
 
           //Trinayan: Start Check MPKI

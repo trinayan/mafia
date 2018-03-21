@@ -771,7 +771,7 @@ void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t*
 void shader_core_ctx::issue(){
     //really is issue;
 
-  /*if(culprit == 1)
+  if(culprit == 1)
     {
 	if(this->get_sid() < 15) {
 
@@ -797,7 +797,7 @@ void shader_core_ctx::issue(){
    {
        if(this->get_sid() >= 15) {
 
-             if(num_warps_app2 > 4) {
+             if(num_warps_app2 > 2) {
                if(this->get_sid() == 15)
                   num_warps_app2 = num_warps_app2 - 2;
              }
@@ -829,14 +829,14 @@ void shader_core_ctx::issue(){
         schedulers[i]->cycle(num_warps_app2);
     }
    }
-   }*/
+   }
   //culprit = 0;*/
 
-  for (unsigned i = 0; i < schedulers.size(); i++) {
+  /*for (unsigned i = 0; i < schedulers.size(); i++) {
 
 		schedulers[i]->cycle(24);
 	}
-
+*/
   
 }
 
@@ -3341,7 +3341,7 @@ void simt_core_cluster::core_cycle()
     for( std::list<unsigned>::iterator it = m_core_sim_order.begin(); it != m_core_sim_order.end(); ++it ) {
         m_core[*it]->cycle();
     }
-
+    culprit = 0;
     if (m_config->simt_core_sim_order == 1) {
         m_core_sim_order.splice(m_core_sim_order.end(), m_core_sim_order, m_core_sim_order.begin()); 
     }
