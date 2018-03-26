@@ -147,6 +147,9 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
         return HIT;
     }
 
+   if(core_id_l2 != -1)
+    	printf("Core id l2 is %d \n", core_id_l2);
+
     if (m_config.cache_part) {
         unsigned threshold;
 		if(gpu_mode3 ==0)
