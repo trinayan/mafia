@@ -127,6 +127,7 @@ int my_active_sms = 0;
 
 //Trinayan: Global variables for warp limiter
 unsigned int culprit = 0;
+unsigned int culprit_cache = 0;
 extern int num_warps_app1;
 extern int num_warps_app2;
 unsigned long prev_cycles = 0;
@@ -1544,9 +1545,11 @@ void gpgpu_sim::cycle()
           //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high
           if(mpki_1 > mpki_2) {
               culprit = 1;
+	      culprit_cache = 1;
               }
           else if(mpki_1 < mpki_2) {
              culprit =  2;
+	     culprit_cache = 2;
           }
 
       }

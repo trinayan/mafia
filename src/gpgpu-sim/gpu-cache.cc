@@ -36,6 +36,7 @@ extern int gpu_sms;
 extern int gpu_groups;
 extern int gpu_sms_app1;
 extern int gpu_mode3;
+extern int culprit_cache;
 
 
 const char * cache_request_status_str(enum cache_request_status status) 
@@ -147,9 +148,29 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
         return HIT;
     }
 
-   if(core_id_l2 != -1)
-    	printf("Core id l2 is %d \n", core_id_l2);
+//   printf("Culprit cache is %d \n", culprit_cache);
+/*    if(culprit_cache == 1)
+    {
+     if(core_id_l2 != -1 && core_id_l2 < 15)
+     {
+       way_start = way_end;
+ 
+     }
+     
+    }
 
+    else if(culprit_cache == 2)
+    {
+
+     if(core_id_l2 != -1 && core_id_l2 >= 15)
+     {
+       way_start = way_end;
+
+     }
+
+
+    }
+*/
     if (m_config.cache_part) {
         unsigned threshold;
 		if(gpu_mode3 ==0)
@@ -185,6 +206,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
 		}	
     }
 
+    m_config.cache_part = 1;
     if ((m_config.cache_part) && (way_start == way_end)) {
         idx = invalid_line; // only when complete bypassing of one stream
         return MISS;
