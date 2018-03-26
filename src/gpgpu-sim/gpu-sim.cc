@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2011, Tor M. Aamodt, Wilson W.L. Fung, George L. Yuan,
+// Copyright (c) statistics when all apps are finished /2009-2011, Tor M. Aamodt, Wilson W.L. Fung, George L. Yuan,
 // Ali Bakhoda, Andrew Turner, Ivan Sham
 // The University of British Columbia
 // All rights reserved.
@@ -129,7 +129,7 @@ int my_active_sms = 0;
 unsigned int culprit = 0;
 extern int num_warps_app1;
 extern int num_warps_app2;
-
+unsigned long prev_cycles = 0;
 #include "mem_latency_stat.h"
 
 void power_config::reg_options(class OptionParser * opp)
@@ -1026,14 +1026,14 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
    //std::string kernel_info_str = executed_kernel_info_string(); 
    //fprintf(statfout, "%s", kernel_info_str.c_str()); 
 	
-	fprintf(outputfile, "%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
-	fprintf(outputfile, "%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
+	fprintf(outputfile, "IPC1=%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
+	fprintf(outputfile, "IPC2=%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
 
-   fprintf(outputfile, "%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
+   fprintf(outputfile, "TIPC=%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
 
    // performance counter for stalls due to congestion.
-   fprintf(outputfile, "%d,", gpu_stall_dramfull);
-   fprintf(outputfile, "%d,", gpu_stall_icnt2sh );
+   fprintf(outputfile, "DSTALL=%d,", gpu_stall_dramfull);
+   fprintf(outputfile, "ICSTALL=%d,", gpu_stall_icnt2sh );
 
 
    if(!m_memory_config->m_L2_config.disabled()){
@@ -1532,8 +1532,12 @@ void gpgpu_sim::cycle()
           gpu_stall_dram_full_prev = gpu_stall_dramfull;
           gpu_stall_icnt_full_prev = gpu_stall_icnt2sh;
 
+	  unsigned long curr_cycle = gpu_sim_cycle - prev_cycles;
+	  prev_cycles = gpu_sim_cycle;
+
+
           output = freopen("periodic_dram_icnt_stall.txt","a",file5);
-          fprintf(output, "MPKI 1 = %f , MPKI 2 = %f ,Warp1 = %d and Warp2 = %d, DRAM Stall = %d, ICNT Stall = %d  at Cycle %d \n",mpki_1,mpki_2,num_warps_app1,num_warps_app2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,gpu_sim_cycle);
+          fprintf(output,"MP1=%f,MP2=%f,GSTALL=%d,ISTALL=%d,IPC1=%f,IPC2=%f,W1=%d,W2=%d\n",mpki_1,mpki_2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),num_warps_app1,num_warps_app2);
          
           //Trinayan: End impact calculation
 

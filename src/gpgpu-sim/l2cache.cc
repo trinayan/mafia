@@ -572,8 +572,8 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
 	}
 	
 
-    fprintf(fout, "%f", (float)m_s1/a_s1);
-    fprintf(fout, "%f", (float)m_s2/a_s2);
+    fprintf(fout, "%f,", (float)m_s1/a_s1);
+    fprintf(fout, "%f,", (float)m_s2/a_s2);
 
 
 	
@@ -604,7 +604,7 @@ void gpgpu_sim::L2c_print_cache_stat(FILE *fout) const
 		}
 		
 		fprintf(fout, "%f,", (float) sum1/ gpu_sms_app1);
-		fprintf(fout, "%f,", (float) sum2/ (gpu_sms- gpu_sms_app1));
+		fprintf(fout, "%f", (float) sum2/ (gpu_sms- gpu_sms_app1));
 	}
 
 }

@@ -427,10 +427,10 @@ void tag_array::print( FILE *stream, unsigned &total_access, unsigned &total_mis
 unsigned &total_access_s1, unsigned &total_misses_s1, unsigned &total_access_s2, unsigned 
 &total_misses_s2, unsigned &total_access_s3, unsigned &total_misses_s3) const
 {
-    m_config.print(stream);
+    /*m_config.print(stream);
     fprintf( stream, "\t\tAccess = %d, Miss = %d (%.3g), PendingHit = %d (%.3g)\n", 
              m_access, m_miss, (float) m_miss / m_access, 
-             m_pending_hit, (float) m_pending_hit / m_access);
+             m_pending_hit, (float) m_pending_hit / m_access);*/
     total_misses+=m_miss;
     total_access+=m_access;
     total_access_s1+=m_access_s1;

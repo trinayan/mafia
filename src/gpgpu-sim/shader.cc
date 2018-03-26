@@ -60,8 +60,8 @@ extern int gpu_sms_app1;
 extern int culprit;
 unsigned long num_warps_to_limit_multitasking = 48;
 
-int num_warps_app1 = 24;
-int num_warps_app2 = 24;
+int num_warps_app1 = 36;
+int num_warps_app2 = 36;
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -771,7 +771,7 @@ void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t*
 void shader_core_ctx::issue(){
     //really is issue;
 
-  if(culprit == 1)
+ /* if(culprit == 1)
     {
 	if(this->get_sid() < 15) {
 
@@ -829,14 +829,14 @@ void shader_core_ctx::issue(){
         schedulers[i]->cycle(num_warps_app2);
     }
    }
-   }
-  //culprit = 0;*/
+   }*/
+  
 
-  /*for (unsigned i = 0; i < schedulers.size(); i++) {
+ for (unsigned i = 0; i < schedulers.size(); i++) {
 
-		schedulers[i]->cycle(24);
+		schedulers[i]->cycle(num_warps_app1);
 	}
-*/
+
   
 }
 
