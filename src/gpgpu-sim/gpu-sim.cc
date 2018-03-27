@@ -131,6 +131,9 @@ unsigned int culprit_cache = 0;
 extern int num_warps_app1;
 extern int num_warps_app2;
 unsigned long prev_cycles = 0;
+unsigned int g_core_stallcurr_1 = 0;
+unsigned int g_core_stallcurr_2 = 0;
+
 #include "mem_latency_stat.h"
 
 void power_config::reg_options(class OptionParser * opp)
@@ -1541,7 +1544,7 @@ void gpgpu_sim::cycle()
           fprintf(output,"MP1=%f,MP2=%f,GSTALL=%d,ISTALL=%d,IPC1=%f,IPC2=%f,W1=%d,W2=%d\n",mpki_1,mpki_2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),num_warps_app1,num_warps_app2);
          
           //Trinayan: End impact calculation
-
+          printf("GCore stalls are %d and %d\n", g_core_stallcurr_1, g_core_stallcurr_2);
           //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high
           if(mpki_1 > mpki_2) {
               culprit = 1;

@@ -62,6 +62,11 @@ unsigned long num_warps_to_limit_multitasking = 48;
 
 int num_warps_app1 = 36;
 int num_warps_app2 = 36;
+
+extern unsigned int g_core_stallcurr_1;
+extern unsigned int g_core_stallcurr_2;
+
+
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -942,6 +947,8 @@ void scheduler_unit::cycle(int num_warps_limit)
     bool issued_inst = false; // of these we issued one
 
     order_warps(num_warps_limit);
+    unsigned issued=0;//Trinayan
+
     for ( std::vector< shd_warp_t* >::const_iterator iter = m_next_cycle_prioritized_warps.begin();
           iter != m_next_cycle_prioritized_warps.end();
           iter++ ) {
@@ -953,7 +960,7 @@ void scheduler_unit::cycle(int num_warps_limit)
                        (*iter)->get_warp_id(), (*iter)->get_dynamic_warp_id() );
         unsigned warp_id = (*iter)->get_warp_id();
         unsigned checked=0;
-        unsigned issued=0;
+        issued=0; //Trinayan
         unsigned max_issue = m_shader->m_config->gpgpu_max_insn_issue_per_warp;
         while( !warp(warp_id).waiting() && !warp(warp_id).ibuffer_empty() && (checked < max_issue) && (checked <= issued) && (issued < max_issue) ) {
             const warp_inst_t *pI = warp(warp_id).ibuffer_next_inst();
@@ -1043,7 +1050,15 @@ void scheduler_unit::cycle(int num_warps_limit)
         } 
     }
 	int threshold;
-	
+    //Trinayan
+    if(!issued)
+    {
+        if(this->get_sid() < 15)
+            g_core_stallcurr_1++;
+        else if(this->get_sid() >= 15 && this->get_sid() < 30)
+            g_core_stallcurr_2++;
+
+    }
 
     // issue stall statistics:
     if( !valid_inst ){ 
