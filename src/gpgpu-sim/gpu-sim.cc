@@ -830,7 +830,7 @@ void gpgpu_sim::update_stats() {
 void gpgpu_sim::print_stats()
 {
     ptx_file_line_stats_write_file();
-    gpu_print_stat();
+   // gpu_print_stat();
 
     if (g_network_mode) {
         printf("----------------------------Interconnect-DETAILS--------------------------------\n" );
@@ -1102,7 +1102,7 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
 }
 void gpgpu_sim::gpu_print_stat() 
 {  
-   FILE *statfout = stdout; 
+ /*  FILE *statfout = stdout; 
 
    std::string kernel_info_str = executed_kernel_info_string(); 
    fprintf(statfout, "%s", kernel_info_str.c_str()); 
@@ -1232,7 +1232,7 @@ void gpgpu_sim::gpu_print_stat()
    time_vector_print();
    fflush(stdout);
 
-   clear_executed_kernel_info(); 
+   clear_executed_kernel_info(); */
 }
 
 
@@ -1344,7 +1344,7 @@ void shader_core_ctx::issue_block2core( kernel_info_t &kernel )
 
     shader_CTA_count_log(m_sid, 1);
     //printf("GPGPU-Sim uArch: core:%3d, cta:%2u initialized @(%lld,%lld)\n", m_sid, free_cta_hw_id, gpu_sim_cycle, gpu_tot_sim_cycle );
-	printf("GPGPU-Sim uArch: Shader:%3d, cta:%2u initialized @(%lld,%lld), ACTIVE=%d, KERNEL=%d, STREAM=%d\n", m_sid, free_cta_hw_id, gpu_sim_cycle, gpu_tot_sim_cycle, m_n_active_cta, kernel_id, stream_id);
+//	printf("GPGPU-Sim uArch: Shader:%3d, cta:%2u initialized @(%lld,%lld), ACTIVE=%d, KERNEL=%d, STREAM=%d\n", m_sid, free_cta_hw_id, gpu_sim_cycle, gpu_tot_sim_cycle, m_n_active_cta, kernel_id, stream_id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
