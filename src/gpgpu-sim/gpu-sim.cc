@@ -134,6 +134,10 @@ unsigned long prev_cycles = 0;
 unsigned int g_core_stallcurr_1 = 0;
 unsigned int g_core_stallcurr_2 = 0;
 
+unsigned swl_active = 0;
+unsigned cache_bypass = 0;
+unsigned ctl_throttle = 0;
+
 #include "mem_latency_stat.h"
 
 void power_config::reg_options(class OptionParser * opp)
@@ -148,8 +152,7 @@ void power_config::reg_options(class OptionParser * opp)
 	                          &g_power_simulation_enabled, "Turn on power simulator (1=On, 0=Off)",
 	                          "0");
 
-	   option_parser_register(opp, "-power_per_cycle_dump", OPT_BOOL,
-	                          &g_power_per_cycle_dump, "Dump detailed power output each cycle",
+	   option_parser_register(opp, "-power_per_cycle_dump", OPT_BOOL,	                          &g_power_per_cycle_dump, "Dump detailed power output each cycle",
 	                          "0");
 
 	   // Output Data Formats
@@ -421,6 +424,23 @@ void gpgpu_sim_config::reg_options(option_parser_t opp)
     m_shader_config.reg_options(opp);
     m_memory_config.reg_options(opp);
     power_config::reg_options(opp);
+//Trinayan
+   option_parser_register(opp, "-gpgpu_swl_active", OPT_INT32, &swl_active,
+               "Decides if swl is to be applied",
+               "0");
+   
+    option_parser_register(opp, "-gpgpu_cache_bypass", OPT_INT32, &cache_bypass,
+               "Decides if cache bypass is to be applied",
+               "0");
+    
+    option_parser_register(opp, "-gpgpu_cta_throttle", OPT_INT32, &ctl_throttle,
+               "Decides if cta throttling is to be applied",
+               "0");   
+
+   option_parser_register(opp, "-gpgpu_max_cycle", OPT_INT32, &gpu_max_cycle_opt,
+               "terminates gpu simulation early (0 = no limit)",
+               "0");
+
    option_parser_register(opp, "-gpgpu_max_cycle", OPT_INT32, &gpu_max_cycle_opt, 
                "terminates gpu simulation early (0 = no limit)",
                "0");
@@ -1254,6 +1274,9 @@ void shader_core_ctx::mem_instruction_stats(const warp_inst_t &inst)
 
 void shader_core_ctx::issue_block2core( kernel_info_t &kernel ) 
 {
+
+    printf("SM ID %d aMax cta per shader is %d \n",this->get_sid(),kernel_max_cta_per_shader);
+
     set_max_cta(kernel);
 	
     unsigned kernel_id = kernel.get_uid(); //new
@@ -1470,6 +1493,7 @@ void gpgpu_sim::cycle()
 	  if(gpu_sim_cycle % 512 == 0)
       {
 
+          
           //Trinayan: Start Check MPKI
           unsigned long long int  current_insn_1 = get_gpu_insn(1);
           unsigned long long int  current_insn_2 = get_gpu_insn(2);
@@ -1541,7 +1565,7 @@ void gpgpu_sim::cycle()
 
 
           output = freopen("periodic_dram_icnt_stall.txt","a",file5);
-          fprintf(output,"MP1=%f,MP2=%f,GSTALL=%d,ISTALL=%d,IPC1=%f,IPC2=%f,W1=%d,W2=%d\n",mpki_1,mpki_2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),num_warps_app1,num_warps_app2);
+          fprintf(output,"MP1=%f,MP2=%f,GSTALL=%d,ISTALL=%d,IPC1=%f,IPC2=%f,W1=%d,W2=%d\,S1=%d,S2=%d \n",mpki_1,mpki_2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),num_warps_app1,num_warps_app2,g_core_stallcurr_1,g_core_stallcurr_2);
          
           //Trinayan: End impact calculation
           printf("GCore stalls are %d and %d\n", g_core_stallcurr_1, g_core_stallcurr_2);
@@ -1555,6 +1579,8 @@ void gpgpu_sim::cycle()
 	     culprit_cache = 2;
           }
 
+          g_core_stallcurr_1 = 0;
+          g_core_stallcurr_2 = 0;
       }
 	  
       // new

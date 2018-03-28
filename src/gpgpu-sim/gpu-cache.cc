@@ -37,7 +37,7 @@ extern int gpu_groups;
 extern int gpu_sms_app1;
 extern int gpu_mode3;
 extern int culprit_cache;
-
+extern unsigned cache_bypass;
 
 const char * cache_request_status_str(enum cache_request_status status) 
 {
@@ -124,6 +124,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
     //assert( m_config.m_write_policy == READ_ONLY );
     unsigned set_index = m_config.set_index(addr);
     new_addr_type tag = m_config.tag(addr);
+    m_config.cache_part = 1;
 
     unsigned invalid_line = (unsigned)-1;
     unsigned valid_line = (unsigned)-1;
@@ -148,10 +149,11 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
         return HIT;
     }
 
-//   printf("Culprit cache is %d \n", culprit_cache);
+  if(cache_bypass == 1)
+   {
     if(culprit_cache == 1)
     {
-     if(core_id_l2 != -1 && core_id_l2 < 15)
+     if(core_id_l2 != -1 && core_id_l2 < gpu_sms_app1)
      {
        way_start = way_end;
  
@@ -162,7 +164,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
     else if(culprit_cache == 2)
     {
 
-     if(core_id_l2 != -1 && core_id_l2 >= 15)
+     if(core_id_l2 != -1 && core_id_l2 >= gpu_sms_app1)
      {
        way_start = way_end;
 
@@ -170,8 +172,8 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
 
 
     }
-
-    m_config.cache_part = 1;
+  }
+    
 
 /*    if (m_config.cache_part) {
         unsigned threshold;

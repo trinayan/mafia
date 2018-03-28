@@ -66,6 +66,8 @@ int num_warps_app2 = 36;
 extern unsigned int g_core_stallcurr_1;
 extern unsigned int g_core_stallcurr_2;
 
+extern unsigned swl_active;
+extern unsigned ctl_throttle;
 
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -776,9 +778,11 @@ void shader_core_ctx::issue_warp( register_set& pipe_reg_set, const warp_inst_t*
 void shader_core_ctx::issue(){
     //really is issue;
 
- /* if(culprit == 1)
+ if(swl_active == 1)
+{
+ if(culprit == 1)
     {
-	if(this->get_sid() < 15) {
+	if(this->get_sid() < gpu_sms_app1) {
 
              if(num_warps_app1 > 2) {
                if(this->get_sid() == 0)
@@ -788,9 +792,9 @@ void shader_core_ctx::issue(){
         		schedulers[i]->cycle(num_warps_app1);
            }    
            
-          else if (this->get_sid() >= 15) {
-               if(num_warps_app2 < 24) {
-                  if(this->get_sid() == 15)
+          else if (this->get_sid() >= gpu_sms_app1) {
+               if(num_warps_app2 < 36) {
+                  if(this->get_sid() == gpu_sms_app1)
 		      num_warps_app2 = num_warps_app2 + 2;	
              } 
             for (unsigned i = 0; i < schedulers.size(); i++) 
@@ -800,18 +804,18 @@ void shader_core_ctx::issue(){
 
    else if(culprit == 2)
    {
-       if(this->get_sid() >= 15) {
+       if(this->get_sid() >= gpu_sms_app1) {
 
              if(num_warps_app2 > 2) {
-               if(this->get_sid() == 15)
+               if(this->get_sid() == gpu_sms_app1)
                   num_warps_app2 = num_warps_app2 - 2;
              }
              for (unsigned i = 0; i < schedulers.size(); i++) 
                         schedulers[i]->cycle(num_warps_app2);
            } 
    
-          else if (this->get_sid() < 15) {
-               if(num_warps_app1 < 24) {
+          else if (this->get_sid() < gpu_sms_app1) {
+               if(num_warps_app1 < 36) {
                   if(this->get_sid() == 0)
                       num_warps_app1 = num_warps_app1 + 2;
              }
@@ -823,25 +827,27 @@ void shader_core_ctx::issue(){
    if(culprit == 0)
    {
 
-  if(this->get_sid() < 15) {
+  if(this->get_sid() < gpu_sms_app1) {
     for (unsigned i = 0; i < schedulers.size(); i++) {
         schedulers[i]->cycle(num_warps_app1);
     }
     }
 
-   else if(this->get_sid() >= 15) {
+   else if(this->get_sid() >= gpu_sms_app1) {
       for (unsigned i = 0; i < schedulers.size(); i++) {
         schedulers[i]->cycle(num_warps_app2);
     }
    }
-   }*/
+   }
   
-
+}
+else if(swl_active == 0)
+ {
  for (unsigned i = 0; i < schedulers.size(); i++) {
 
 		schedulers[i]->cycle(num_warps_app1);
 	}
-
+}
   
 }
 
@@ -1053,9 +1059,9 @@ void scheduler_unit::cycle(int num_warps_limit)
     //Trinayan
     if(!issued)
     {
-        if(this->get_sid() < 15)
+        if(this->get_sid() < gpu_sms_app1)
             g_core_stallcurr_1++;
-        else if(this->get_sid() >= 15 && this->get_sid() < 30)
+        else if(this->get_sid() >= gpu_sms_app1)
             g_core_stallcurr_2++;
 
     }
@@ -1265,12 +1271,13 @@ void swl_scheduler::order_warps(int num_warps_limit)
 {
     //Trinayan: Changed code to use global variable for limiting number of warps
 
-    //printf("num warp is %d \n", num_warps_limit); 
+    //printf("num warp is %d \n", num_warps_limit);
+   // printf("Supervised warps is %d \n", m_supervised_warps.size()); 
     if ( SCHEDULER_PRIORITIZATION_GTO == m_prioritization ) {
         order_by_priority( m_next_cycle_prioritized_warps,
                            m_supervised_warps,
                            m_last_supervised_issued,
-                           MIN( num_warps_limit, m_supervised_warps.size() ),
+                           MIN( 2, m_supervised_warps.size() ),
                            ORDERING_GREEDY_THEN_PRIORITY_FUNC,
                            scheduler_unit::sort_warps_by_oldest_dynamic_id );
     } else {
@@ -2622,7 +2629,9 @@ void shader_core_ctx::display_pipeline(FILE *fout, int print_mem, int mask ) con
 
 unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int sm_id ) const
 {
-   unsigned threads_per_cta  = k.threads_per_cta();
+
+ 
+  unsigned threads_per_cta  = k.threads_per_cta();
    const class function_info *kernel = k.entry();
    unsigned int padded_cta_size = threads_per_cta;
    if (padded_cta_size%warp_size) 
@@ -2679,7 +2688,18 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int s
        abort();
     }
 
-    return result;
+//   printf("Thr is %d \n",ctl_throttle);
+
+
+   if(ctl_throttle == 1)
+  {
+    if(sm_id < 15)
+	result = 2;
+    else
+	result = result;
+   }
+
+    return result; 
 }
 
 void shader_core_ctx::cycle()
@@ -2941,7 +2961,10 @@ void shader_core_ctx::set_max_cta( const kernel_info_t &kernel )
 {
     // calculate the max cta count and cta size for local memory address mapping
 	int sm_id = get_sid(); //new
+   
     kernel_max_cta_per_shader = m_config->max_cta(kernel, sm_id); //new
+    
+    printf("SM id is %d and max cta is %d \n", sm_id,kernel_max_cta_per_shader);
 	
     unsigned int gpu_cta_size = kernel.threads_per_cta();
     kernel_padded_threads_per_cta = (gpu_cta_size%m_config->warp_size) ? 
@@ -3356,7 +3379,7 @@ void simt_core_cluster::core_cycle()
     for( std::list<unsigned>::iterator it = m_core_sim_order.begin(); it != m_core_sim_order.end(); ++it ) {
         m_core[*it]->cycle();
     }
-    culprit = 0;
+    //culprit = 0; //Trinayan:Commenting out for now
     if (m_config->simt_core_sim_order == 1) {
         m_core_sim_order.splice(m_core_sim_order.end(), m_core_sim_order, m_core_sim_order.begin()); 
     }
@@ -3453,7 +3476,8 @@ unsigned simt_core_cluster::issue_block2core()
             }
         }
         kernel_info_t *kernel = m_core[core]->get_kernel();
-        if( kernel && !kernel->no_more_ctas_to_run() && (m_core[core]->get_n_active_cta() < m_config->max_cta(*kernel, core)) ) {
+        if( kernel && !kernel->no_more_ctas_to_run() && (m_core[core]->get_n_active_cta() < m_config->max_cta(*kernel, m_cluster_id)) ) {
+            //printf("Core is %d \n", core);
             m_core[core]->issue_block2core(*kernel);
             num_blocks_issued++;
             m_cta_issue_next_core=core; 
