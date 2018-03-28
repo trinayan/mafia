@@ -58,7 +58,7 @@ extern int gpu_sms_app1;
 
 //Trinayan : New variables
 extern int culprit;
-unsigned long num_warps_to_limit_multitasking = 48;
+
 
 int num_warps_app1 = 36;
 int num_warps_app2 = 36;
@@ -68,6 +68,9 @@ extern unsigned int g_core_stallcurr_2;
 
 extern unsigned swl_active;
 extern unsigned ctl_throttle;
+
+extern unsigned num_cta_app1;
+extern unsigned num_cta_app2;
 
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -1056,8 +1059,9 @@ void scheduler_unit::cycle(int num_warps_limit)
         } 
     }
 	int threshold;
-    //Trinayan
-    if(!issued)
+
+    //Trinayan see if it is possible to throttle the culprit based on its idle behavior
+    if(!valid_inst)
     {
         if(this->get_sid() < gpu_sms_app1)
             g_core_stallcurr_1++;
@@ -2655,6 +2659,15 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int s
    //Limit by CTA
    unsigned int result_cta = max_cta_per_core;
 
+    if(ctl_throttle == 1)
+    {
+        if(sm_id < gpu_sms_app1)
+            result_cta = num_cta_app1;
+        else if(sm_id >= gpu_sms_app1)
+            result_cta = num_cta_app2;
+    }
+
+
    unsigned result = result_thread;
    result = gs_min2(result, result_shmem);
    result = gs_min2(result, result_regs);
@@ -2691,13 +2704,7 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int s
 //   printf("Thr is %d \n",ctl_throttle);
 
 
-   if(ctl_throttle == 1)
-  {
-    if(sm_id < 15)
-	result = 2;
-    else
-	result = result;
-   }
+
 
     return result; 
 }

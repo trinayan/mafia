@@ -82,6 +82,8 @@ extern FILE *file2;
 extern FILE *file3;
 extern FILE *file4;
 extern FILE *file5;
+extern FILE *file6;
+
 bool g_interactive_debugger_enabled=false;
 
 
@@ -137,6 +139,10 @@ unsigned int g_core_stallcurr_2 = 0;
 unsigned swl_active = 0;
 unsigned cache_bypass = 0;
 unsigned ctl_throttle = 0;
+
+unsigned num_cta_app1 = 8;
+unsigned num_cta_app2 = 8;
+
 
 #include "mem_latency_stat.h"
 
@@ -1043,21 +1049,28 @@ void gpgpu_sim::clear_executed_kernel_info()
    m_executed_kernel_uids.clear();
 }
 
+void gpgpu_sim::gpu_print_final_stat_file(FILE* outpufile)
+{
+
+}
+
 void gpgpu_sim::gpu_print_stat_file(FILE* outputfile) 
 {  
    //FILE *statfout = stdout; 
 
    //std::string kernel_info_str = executed_kernel_info_string(); 
    //fprintf(statfout, "%s", kernel_info_str.c_str()); 
-	
-	fprintf(outputfile, "IPC1=%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
-	fprintf(outputfile, "IPC2=%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
 
-   fprintf(outputfile, "TIPC=%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
+    //IPC1,IPC2,TIPC,DSTALL,ICSTALL,CMR1,CMR2,MPK1,MPK2
+
+	fprintf(outputfile, "%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
+	fprintf(outputfile, "%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
+
+   fprintf(outputfile, "%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
 
    // performance counter for stalls due to congestion.
-   fprintf(outputfile, "DSTALL=%d,", gpu_stall_dramfull);
-   fprintf(outputfile, "ICSTALL=%d,", gpu_stall_icnt2sh );
+   fprintf(outputfile, "%d,", gpu_stall_dramfull);
+   fprintf(outputfile, "%d,", gpu_stall_icnt2sh );
 
 
    if(!m_memory_config->m_L2_config.disabled()){
@@ -1490,7 +1503,7 @@ void gpgpu_sim::cycle()
       gpu_sim_cycle++;
 
 
-	  if(gpu_sim_cycle % 512 == 0)
+	  if(gpu_sim_cycle % 10000 == 0)
       {
 
           
@@ -1556,12 +1569,15 @@ void gpgpu_sim::cycle()
           unsigned int gpu_stall_dram_full_diff =  gpu_stall_dramfull - gpu_stall_dram_full_prev;
           unsigned int gpu_stall_icnt_full_diff =  gpu_stall_icnt2sh - gpu_stall_icnt_full_prev;
 
+          float percent_dram_stall = gpu_stall_dram_full_diff/gpu_sim_cycle;
+          float percent_icnt_stall = gpu_stall_icnt_full_diff/gpu_sim_cycle;
+
 
           gpu_stall_dram_full_prev = gpu_stall_dramfull;
           gpu_stall_icnt_full_prev = gpu_stall_icnt2sh;
 
-	  unsigned long curr_cycle = gpu_sim_cycle - prev_cycles;
-	  prev_cycles = gpu_sim_cycle;
+          unsigned long curr_cycle = gpu_sim_cycle - prev_cycles;
+          prev_cycles = gpu_sim_cycle;
 
 
           output = freopen("periodic_dram_icnt_stall.txt","a",file5);
@@ -1569,14 +1585,20 @@ void gpgpu_sim::cycle()
          
           //Trinayan: End impact calculation
           printf("GCore stalls are %d and %d\n", g_core_stallcurr_1, g_core_stallcurr_2);
+
           //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high
+          //Before throttling the cluprit we need to know two things basically
+          // 1. How much problem the culprit is causing (dram_stall, icnt_stall)
+          // 2. What is the latency tolerance of the culprit ie idle cycles
+          // 3. We decide by tradeoff here.
+          //If culprit is switching we may want to wait before making a decision.
           if(mpki_1 > mpki_2) {
               culprit = 1;
-	      culprit_cache = 1;
+              //If percent dram or icnt stalls are greater than a threshold specify different cta levels
+              //and throttle accordingly.
               }
           else if(mpki_1 < mpki_2) {
              culprit =  2;
-	     culprit_cache = 2;
           }
 
           g_core_stallcurr_1 = 0;
@@ -1756,14 +1778,22 @@ void gpgpu_sim::cycle()
 	if (m_memory_config->gpu_app == 0) { // normal execution (no -- streams)
 		        if (m_config.gpu_max_insn_opt && ((gpu_sim_insn_1 >= m_config.gpu_max_insn_opt)) ) {
 			        max_insn_struck = true;
-                                print_stats();
+                    print_stats();
         			output = freopen("stream1.txt", "a", file1);
-                                gpu_print_stat_file(output);
-  				fflush(output);
- 				fclose(output);
-                                abort();
+                    gpu_print_stat_file(output);
+  				    fflush(output);
+ 				    fclose(output);
+                    abort();
                 }
 	}
+     //Trinayan:Write to file when completely done
+    else if ((m_config.gpu_max_insn_opt && ((gpu_sim_insn_1 >= m_config.gpu_max_insn_opt) || (gpu_sim_insn_2 >= m_config.gpu_max_insn_opt) || (gpu_sim_insn_3 >= m_config.gpu_max_insn_opt))))  {
+        max_insn_struck = true;
+        output = freopen("final_result.txt","w",file6);
+        gpu_print_stat_file(output);
+        fflush(output);
+        abort();
+    }
 
 	else {  // execution with streams
           if (m_config.gpu_max_insn_opt && ((gpu_sim_insn_1 >= m_config.gpu_max_insn_opt) || (gpu_sim_insn_2 >= m_config.gpu_max_insn_opt) || (gpu_sim_insn_3 >= m_config.gpu_max_insn_opt))) {

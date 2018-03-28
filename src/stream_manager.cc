@@ -48,7 +48,7 @@ FILE *file2 = fopen("stream2.txt", "w");
 FILE *file3 = fopen("stream3.txt", "w");
 FILE *file4 = fopen("periodic_mpki.txt","w");
 FILE *file5 = fopen("periodic_dram_icnt_stall.txt","w");
-FILE *file6 = fopen("final_result.txt","w");
+FILE *file6 = fopen("final_result.csv","w");
 
 bool stat_flag = false;
 bool stat_flag_1 = false;
@@ -338,10 +338,10 @@ void stream_operation::do_operation( gpgpu_sim *gpu )
            
 				fclose(output);
 
-  				output = freopen("final_result.txt","a",file6);
+  				/*output = freopen("final_result.txt","a",file6);
   				gpu->gpu_print_stat_file(output);
  				fflush(output);
-				fclose(output);
+				fclose(output);*/
 
 				printf("BOTH APPS ARE FINISHED\n");
 				abort();
