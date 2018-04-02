@@ -40,6 +40,11 @@ extern int gpu_groups; // divides sms to streams
 extern int gpu_mode3;
 extern int gpu_sms_app1;
 
+
+
+extern unsigned long bw_util_app1;
+extern unsigned long bw_util_app2;
+
 #ifdef DRAM_VERIFY
 int PRINT_CYCLE = 0;
 #endif
@@ -379,10 +384,12 @@ void dram_t::cycle()
 				if(find_app(bk[j]->mrq->data->get_sid()) == 1) {//new
 					bwutil[1] += m_config->BL/m_config->data_command_freq_ratio;
 					bwutil_periodic[1] +=  m_config->BL/m_config->data_command_freq_ratio;
+                    bw_util_app1 += m_config->BL/m_config->data_command_freq_ratio;
 				}
 				else if (find_app(bk[j]->mrq->data->get_sid()) == 2){
 					bwutil[2] += m_config->BL/m_config->data_command_freq_ratio;
 					bwutil_periodic[2] +=  m_config->BL/m_config->data_command_freq_ratio;
+                    bw_util_app2 += m_config->BL/m_config->data_command_freq_ratio;
 				}else{
 					bwutil[3] += m_config->BL/m_config->data_command_freq_ratio;
 					bwutil_periodic[3] +=  m_config->BL/m_config->data_command_freq_ratio;
@@ -429,13 +436,16 @@ void dram_t::cycle()
 				if(find_app(bk[j]->mrq->data->get_sid()) == 1) {//new
 					bwutil[1] += m_config->BL/m_config->data_command_freq_ratio;
 					//bwutil_periodic[1] +=  m_config->BL/m_config->data_command_freq_ratio;
+
 				}
 				else if (find_app(bk[j]->mrq->data->get_sid()) == 2){
 					bwutil[2] += m_config->BL/m_config->data_command_freq_ratio;
 					//bwutil_periodic[2] +=  m_config->BL/m_config->data_command_freq_ratio;
+                    bw_util_app1 += m_config->BL/m_config->data_command_freq_ratio;
 				}else{
 					bwutil[3] += m_config->BL/m_config->data_command_freq_ratio;
 					//bwutil_periodic[3] +=  m_config->BL/m_config->data_command_freq_ratio;
+                    bw_util_app2 += m_config->BL/m_config->data_command_freq_ratio;
 				}
 			}
 #ifdef DRAM_VERIFY
