@@ -49,6 +49,7 @@ FILE *file3 = fopen("stream3.txt", "w");
 FILE *file4 = fopen("periodic_mpki.txt","w");
 FILE *file5 = fopen("periodic_dram_icnt_stall.txt","w");
 FILE *file6 = fopen("final_result.csv","w");
+FILE *file7 = fopen("nolabel_result.csv","w");
 
 bool stat_flag = false;
 bool stat_flag_1 = false;
@@ -335,7 +336,11 @@ void stream_operation::do_operation( gpgpu_sim *gpu )
 				
 				gpu->gpu_print_stat_file(output);
 				fflush(output);
-           
+                                fclose(output);
+
+                                output = freopen("nolabel_result.csv","w",file7);
+ 				gpu->gpu_print_stat_nolabel(output);
+ 				fflush(output);
 				fclose(output);
 
   				/*output = freopen("final_result.txt","a",file6);

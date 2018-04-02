@@ -1318,8 +1318,8 @@ void ptx_thread_info::ptx_exec_inst( warp_inst_t &inst, unsigned lane_id)
    if ( (g_ptx_sim_num_insn % 100000) == 0 ) {
       dim3 ctaid = get_ctaid();
       dim3 tid = get_tid();
-      printf("GPGPU-Sim PTX: %u instructions simulated : ctaid=(%u,%u,%u) tid=(%u,%u,%u)\n",
-             g_ptx_sim_num_insn, ctaid.x,ctaid.y,ctaid.z,tid.x,tid.y,tid.z );
+      //printf("GPGPU-Sim PTX: %u instructions simulated : ctaid=(%u,%u,%u) tid=(%u,%u,%u)\n",
+        //     g_ptx_sim_num_insn, ctaid.x,ctaid.y,ctaid.z,tid.x,tid.y,tid.z );
       fflush(stdout);
    }
    
@@ -1718,7 +1718,7 @@ void gpgpu_cuda_ptx_sim_main_func( kernel_info_t &kernel, bool openCL )
    g_stream_manager->register_finished_kernel(kernel.get_uid());
 
    //******PRINTING*******
-   printf( "GPGPU-Sim: Done functional simulation (%u instructions simulated).\n", g_ptx_sim_num_insn );
+   //printf( "GPGPU-Sim: Done functional simulation (%u instructions simulated).\n", g_ptx_sim_num_insn );
    if ( gpgpu_ptx_instruction_classification ) {
       StatDisp( g_inst_classification_stat[g_ptx_kernel_count]);
       StatDisp ( g_inst_op_classification_stat[g_ptx_kernel_count]);

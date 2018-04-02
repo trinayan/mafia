@@ -39,6 +39,14 @@ extern int gpu_mode3;
 extern int culprit_cache;
 extern unsigned cache_bypass;
 
+
+extern unsigned way_start_app1;
+extern unsigned way_start_app2;
+extern unsigned way_end_app1;
+extern  unsigned way_end_app2;
+
+
+
 const char * cache_request_status_str(enum cache_request_status status) 
 {
    static const char * static_cache_request_status_str[] = {
@@ -151,31 +159,28 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
 
   if(cache_bypass == 1)
    {
-    if(culprit_cache == 1)
-    {
+    
+    
      if(core_id_l2 != -1 && core_id_l2 < gpu_sms_app1)
      {
-       way_start = way_end;
+       way_start = way_start_app1;
+       way_end   = way_end_app1;
  
      }
      
-    }
-
-    else if(culprit_cache == 2)
-    {
-
      if(core_id_l2 != -1 && core_id_l2 >= gpu_sms_app1)
      {
-       way_start = way_end;
+       way_start = way_start_app2;
+       way_end   = way_end_app2;
 
      }
 
 
     }
-  }
+
     
 
-/*    if (m_config.cache_part) {
+    if (m_config.cache_part) {
         unsigned threshold;
 		if(gpu_mode3 ==0)
 			threshold = gpu_sms_app1;
@@ -209,7 +214,7 @@ enum cache_request_status tag_array::probe( new_addr_type addr, unsigned &idx , 
 
 		}	
     }
-*/
+
    
     if ((m_config.cache_part) && (way_start == way_end)) {
         idx = invalid_line; // only when complete bypassing of one stream

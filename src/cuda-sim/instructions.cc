@@ -83,9 +83,9 @@ ptx_reg_t ptx_thread_info::get_reg( const symbol *reg )
       set_reg(reg, uninit_reg); // give it a value since we are going to warn the user anyway
       std::string file_loc = get_location();
       if( !unfound_register_warned ) {
-          printf("GPGPU-Sim PTX: WARNING (%s) ** reading undefined register \'%s\' (cuid:%u). Setting to 0X00000000. This is okay if you are simulating the native ISA"
+          /*printf("GPGPU-Sim PTX: WARNING (%s) ** reading undefined register \'%s\' (cuid:%u). Setting to 0X00000000. This is okay if you are simulating the native ISA"
         		  "\n",
-                 file_loc.c_str(), name.c_str(), call_uid );
+                 file_loc.c_str(), name.c_str(), call_uid );*/
           unfound_register_warned = true;
       }
       regs_iter = m_regs.back().find(reg);
@@ -132,7 +132,7 @@ ptx_reg_t ptx_thread_info::get_operand_value( const operand_info &op, operand_in
                result.u64 = op.get_symbol()->get_address() + op.get_addr_offset();
             } else {
                const char *name = op.name().c_str();
-               printf("GPGPU-Sim PTX: ERROR ** get_operand_value : unknown memory operand type for %s\n", name );
+               //printf("GPGPU-Sim PTX: ERROR ** get_operand_value : unknown memory operand type for %s\n", name );
                abort();
             }
 
@@ -150,7 +150,7 @@ ptx_reg_t ptx_thread_info::get_operand_value( const operand_info &op, operand_in
             result.u64 = op.get_symbol()->get_address();
          } else {
             const char *name = op.name().c_str();
-            printf("GPGPU-Sim PTX: ERROR ** get_operand_value : unknown operand type for %s\n", name );
+            //printf("GPGPU-Sim PTX: ERROR ** get_operand_value : unknown operand type for %s\n", name );
             assert(0);
          }
 
@@ -311,12 +311,12 @@ unsigned get_operand_nbits( const operand_info &op )
       case S64_TYPE: case U64_TYPE: case F64_TYPE: case B64_TYPE:
          return 64;
       default:
-         printf("ERROR: unknown register type\n");
+         //printf("ERROR: unknown register type\n");
          fflush(stdout);
          abort();
       }
    } else {
-      printf("ERROR: Need to implement get_operand_nbits() for currently unsupported operand_info type\n");
+      //printf("ERROR: Need to implement get_operand_nbits() for currently unsupported operand_info type\n");
       fflush(stdout);
       abort();
    }
@@ -383,7 +383,7 @@ void ptx_thread_info::set_operand_value( const operand_info &dst, const ptx_reg_
     }
     else
     {
-        printf("Unexpected double destination\n");
+        //printf("Unexpected double destination\n");
         assert(0);
     }
 
@@ -603,7 +603,7 @@ void ptx_thread_info::set_operand_value( const operand_info &dst, const ptx_reg_
 
    else
    {
-       printf("Destination stores to unknown location.");
+       //printf("Destination stores to unknown location.");
        assert(0);
    }
 
@@ -668,7 +668,7 @@ void abs_impl( const ptx_instruction *pI, ptx_thread_info *thread )
    case F32_TYPE: d.f32 = my_abs(a.f32); break;
    case F64_TYPE: case FF64_TYPE: d.f64 = my_abs(a.f64); break;
    default:
-      printf("Execution error: type mismatch with instruction\n");
+      //printf("Execution error: type mismatch with instruction\n");
       assert(0);
       break;
    }
@@ -855,7 +855,7 @@ void andn_impl( const ptx_instruction *pI, ptx_thread_info *thread )
    case B32_TYPE:  src2_data.u32  = ~src2_data.u32; break;
    case B64_TYPE:  src2_data.u64  = ~src2_data.u64; break;
    default:
-      printf("Execution error: type mismatch with instruction\n");
+     // printf("Execution error: type mismatch with instruction\n");
       assert(0); 
       break;
    }
@@ -949,7 +949,7 @@ void atom_callback( const inst_t* inst, ptx_thread_info* thread )
             data_ready = true;
             break;
          default:
-            printf("Execution error: type mismatch (%x) with instruction\natom.AND only accepts b32\n", to_type);
+            //printf("Execution error: type mismatch (%x) with instruction\natom.AND only accepts b32\n", to_type);
             assert(0);
             break;
          }

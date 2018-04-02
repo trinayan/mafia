@@ -83,6 +83,7 @@ extern FILE *file3;
 extern FILE *file4;
 extern FILE *file5;
 extern FILE *file6;
+extern FILE *file7;
 
 bool g_interactive_debugger_enabled=false;
 
@@ -130,19 +131,45 @@ int my_active_sms = 0;
 //Trinayan: Global variables for warp limiter
 unsigned int culprit = 0;
 unsigned int culprit_cache = 0;
-extern int num_warps_app1;
-extern int num_warps_app2;
+
 unsigned long prev_cycles = 0;
+
+
 unsigned int g_core_stallcurr_1 = 0;
 unsigned int g_core_stallcurr_2 = 0;
+
+unsigned int g_idle_stall_1 = 0;
+unsigned int g_idle_stall_2 = 0;
+
+unsigned int g_mem_stall_1 = 0;
+unsigned int g_mem_stall_2 = 0;
+
+
 
 unsigned swl_active = 0;
 unsigned cache_bypass = 0;
 unsigned ctl_throttle = 0;
 
-unsigned num_cta_app1 = 8;
-unsigned num_cta_app2 = 8;
+unsigned num_cta_app1 = 1;
+unsigned num_cta_app2 = 1;
 
+
+
+unsigned counter1 = 0;
+unsigned counter2 = 0;
+
+unsigned way_start_app1 = 0;
+unsigned way_end_app1   = 8;
+unsigned way_start_app2 = 0;
+unsigned way_end_app2   = 8;
+//unsigned prev_culprit = 0;
+//unsigned curr
+
+unsigned long long inscounter = 0;
+
+
+unsigned num_warps_app1 = 48;
+unsigned num_warps_app2 = 48;
 
 #include "mem_latency_stat.h"
 
@@ -831,6 +858,9 @@ void gpgpu_sim::print_stats()
 {
     ptx_file_line_stats_write_file();
    // gpu_print_stat();
+   output = freopen("nolabel_result.csv","w",file7);
+   gpu_print_stat_nolabel(output);
+   fflush(output);
 
     if (g_network_mode) {
         printf("----------------------------Interconnect-DETAILS--------------------------------\n" );
@@ -1054,6 +1084,47 @@ void gpgpu_sim::gpu_print_final_stat_file(FILE* outpufile)
 
 }
 
+
+void gpgpu_sim::gpu_print_stat_nolabel(FILE* outputfile)
+{
+fprintf(outputfile, "%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
+        fprintf(outputfile, "%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
+
+   fprintf(outputfile, "%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
+
+    if(!m_memory_config->m_L2_config.disabled()){
+       cache_stats l2_stats;
+       struct cache_sub_stats l2_css;
+       struct cache_sub_stats total_l2_css;
+       l2_stats.clear();
+       l2_css.clear();
+       total_l2_css.clear();
+
+       for (unsigned i=0;i<m_memory_config->m_n_mem_sub_partition;i++){
+           m_memory_sub_partition[i]->accumulate_L2cache_stats(l2_stats);
+           m_memory_sub_partition[i]->get_L2cache_sub_stats(l2_css);
+
+           total_l2_css += l2_css;
+       }
+       if (!m_memory_config->m_L2_config.disabled() && m_memory_config->m_L2_config.get_num_lines()) {
+                  L2c_print_cache_stat(outputfile);
+
+       }
+   }
+
+   fprintf(outputfile, "%f,", float(gpu_stall_dramfull)/((gpu_tot_sim_cycle+gpu_sim_cycle)));
+   fprintf(outputfile, "%f,", float(gpu_stall_icnt2sh)/(gpu_tot_sim_cycle+gpu_sim_cycle));
+
+
+    fprintf(outputfile, "%f,", float(g_core_stallcurr_1)/(15*(gpu_tot_sim_cycle_stream_1)));
+    fprintf(outputfile, "%f,", float(g_core_stallcurr_2)/(15*(gpu_tot_sim_cycle_stream_2)));
+    fprintf(outputfile, "%f,", float(g_idle_stall_1)/(15*(gpu_tot_sim_cycle_stream_1)));
+    fprintf(outputfile, "%f,", float(g_idle_stall_2)/(15*(gpu_tot_sim_cycle_stream_2)));
+    fprintf(outputfile, "%f,", float( g_mem_stall_1)/(15*(gpu_tot_sim_cycle_stream_1)));
+    fprintf(outputfile, "%f\n", float( g_mem_stall_2)/(15*(gpu_tot_sim_cycle_stream_2)));
+
+}
+
 void gpgpu_sim::gpu_print_stat_file(FILE* outputfile) 
 {  
    //FILE *statfout = stdout; 
@@ -1063,14 +1134,14 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
 
     //IPC1,IPC2,TIPC,DSTALL,ICSTALL,CMR1,CMR2,MPK1,MPK2
 
-	fprintf(outputfile, "%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
-	fprintf(outputfile, "%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
+	fprintf(outputfile, "I1=%f,", (float)gpu_sim_insn_1 / gpu_tot_sim_cycle_stream_1);
+	fprintf(outputfile, "I2=%f,", (float)gpu_sim_insn_2 / gpu_tot_sim_cycle_stream_2);
 
    fprintf(outputfile, "%f,", (float)(gpu_tot_sim_insn+gpu_sim_insn) / (gpu_tot_sim_cycle+gpu_sim_cycle));
 
    // performance counter for stalls due to congestion.
-   fprintf(outputfile, "%d,", gpu_stall_dramfull);
-   fprintf(outputfile, "%d,", gpu_stall_icnt2sh );
+   fprintf(outputfile, "DS=%f,", float(gpu_stall_dramfull)/(gpu_tot_sim_cycle+gpu_sim_cycle));
+   fprintf(outputfile, "IC=%f,", float(gpu_stall_icnt2sh)/(gpu_tot_sim_cycle+gpu_sim_cycle));
 
 
    if(!m_memory_config->m_L2_config.disabled()){
@@ -1093,6 +1164,13 @@ void gpgpu_sim::gpu_print_stat_file(FILE* outputfile)
        }
    }
 
+
+    fprintf(outputfile, "Isu1=%f,", float(g_core_stallcurr_1)/gpu_tot_sim_cycle_stream_1);
+    fprintf(outputfile, "Isu2=%f,", float(g_core_stallcurr_2)/gpu_tot_sim_cycle_stream_2);
+    fprintf(outputfile, "Idl1=%f,", float(g_idle_stall_1)/gpu_tot_sim_cycle_stream_1);
+    fprintf(outputfile, "Idl2=%f,", float(g_idle_stall_2)/gpu_tot_sim_cycle_stream_2);
+    fprintf(outputfile, "Mem1=%f,", float( g_mem_stall_1)/gpu_tot_sim_cycle_stream_1);
+    fprintf(outputfile, "Mem2=%f\n", float( g_mem_stall_2)/gpu_tot_sim_cycle_stream_1);
 
 
    //time_vector_print();
@@ -1123,7 +1201,7 @@ void gpgpu_sim::gpu_print_stat()
    
 	
 
-   printf("gpu_sim_cycle = %lld\n", gpu_sim_cycle);
+   printf("gpu_sim_cycle = %lld\n", pu_sim_cycle);
    printf("gpu_sim_insn = %lld\n", gpu_sim_insn);
    printf("gpu_ipc = %12.4f\n", (float)gpu_sim_insn / gpu_sim_cycle);
    printf("gpu_tot_sim_cycle = %lld\n", gpu_tot_sim_cycle+gpu_sim_cycle);
@@ -1288,7 +1366,7 @@ void shader_core_ctx::mem_instruction_stats(const warp_inst_t &inst)
 void shader_core_ctx::issue_block2core( kernel_info_t &kernel ) 
 {
 
-    printf("SM ID %d aMax cta per shader is %d \n",this->get_sid(),kernel_max_cta_per_shader);
+    //printf("SM ID %d aMax cta per shader is %d \n",this->get_sid(),kernel_max_cta_per_shader);
 
     set_max_cta(kernel);
 	
@@ -1344,7 +1422,7 @@ void shader_core_ctx::issue_block2core( kernel_info_t &kernel )
 
     shader_CTA_count_log(m_sid, 1);
     //printf("GPGPU-Sim uArch: core:%3d, cta:%2u initialized @(%lld,%lld)\n", m_sid, free_cta_hw_id, gpu_sim_cycle, gpu_tot_sim_cycle );
-//	printf("GPGPU-Sim uArch: Shader:%3d, cta:%2u initialized @(%lld,%lld), ACTIVE=%d, KERNEL=%d, STREAM=%d\n", m_sid, free_cta_hw_id, gpu_sim_cycle, gpu_tot_sim_cycle, m_n_active_cta, kernel_id, stream_id);
+	printf("GPGPU-Sim uArch: Shader:%3d, cta:%2u initialized @(%lld,%lld), ACTIVE=%d, KERNEL=%d, STREAM=%d\n", m_sid, free_cta_hw_id, gpu_sim_cycle, gpu_tot_sim_cycle, m_n_active_cta, kernel_id, stream_id);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1503,10 +1581,10 @@ void gpgpu_sim::cycle()
       gpu_sim_cycle++;
 
 
-	  if(gpu_sim_cycle % 10000 == 0)
+    if(gpu_sim_cycle % 512 == 0)
       {
 
-          
+         inscounter = 0; 
           //Trinayan: Start Check MPKI
           unsigned long long int  current_insn_1 = get_gpu_insn(1);
           unsigned long long int  current_insn_2 = get_gpu_insn(2);
@@ -1581,30 +1659,103 @@ void gpgpu_sim::cycle()
 
 
           output = freopen("periodic_dram_icnt_stall.txt","a",file5);
-          fprintf(output,"MP1=%f,MP2=%f,GSTALL=%d,ISTALL=%d,IPC1=%f,IPC2=%f,W1=%d,W2=%d\,S1=%d,S2=%d \n",mpki_1,mpki_2,gpu_stall_dram_full_diff,gpu_stall_icnt_full_diff,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),num_warps_app1,num_warps_app2,g_core_stallcurr_1,g_core_stallcurr_2);
-         
+          fprintf(output,"%f,%f,%f,%f,%f,%f,%f\n",mpki_1,mpki_2,float(gpu_stall_dram_full_diff)/curr_cycle,float(gpu_stall_icnt_full_diff)/curr_cycle,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),float(g_mem_stall_1)/(15*curr_cycle));
+        
+          
           //Trinayan: End impact calculation
-          printf("GCore stalls are %d and %d\n", g_core_stallcurr_1, g_core_stallcurr_2);
+/*
+          printf("GCore stalls are %f and %f\n", float(g_core_stallcurr_1)/(512*15), float(g_core_stallcurr_2)/(512*15));
+ 
+           printf("Idle stalls are %f and %f\n", float(g_idle_stall_1)/(512*15), float(g_idle_stall_2)/(512*15));
 
+            printf("Mem stalls are %f and %f\n", float(g_mem_stall_1)/(512*15), float(g_mem_stall_2)/(512*15));
+
+
+          printf("DRAM and ICNT stalls are %f and %f\n",float(gpu_stall_dram_full_diff)/(12*512),float(gpu_stall_icnt_full_diff)/(12*512));
+
+
+           g_core_stallcurr_1 = 0;
+           g_core_stallcurr_2 = 0;
+ 	   g_idle_stall_1 = 0;
+	   g_idle_stall_2 = 0;
+	   g_mem_stall_1 = 0;
+	   g_mem_stall_2 = 0;*/
           //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high
           //Before throttling the cluprit we need to know two things basically
           // 1. How much problem the culprit is causing (dram_stall, icnt_stall)
           // 2. What is the latency tolerance of the culprit ie idle cycles
           // 3. We decide by tradeoff here.
           //If culprit is switching we may want to wait before making a decision.
-          if(mpki_1 > mpki_2) {
-              culprit = 1;
-              //If percent dram or icnt stalls are greater than a threshold specify different cta levels
-              //and throttle accordingly.
+    
+     if(swl_active || ctl_throttle || cache_bypass) 
+   {
+         if(mpki_1 > mpki_2) {  
+            if(counter1 < 3)
+                counter1++;
+ 
+            if(counter2 > 0)
+		counter2--;           
               }
           else if(mpki_1 < mpki_2) {
-             culprit =  2;
-          }
+              if(counter1 > 0)
+		 counter1--;
 
-          g_core_stallcurr_1 = 0;
-          g_core_stallcurr_2 = 0;
-      }
-	  
+              if(counter2 < 3)
+		 counter2++;   
+            }
+
+          if(counter1 == 3) 
+           {
+           if(num_cta_app1 > 1) 
+             num_cta_app1 = num_cta_app1 - 1;
+     
+            
+           if(num_cta_app2 < 8) //Also check if high idle stalls
+	     num_cta_app2 = num_cta_app2 + 1;
+         
+            if(way_start_app1 <7)
+		way_start_app1 = way_start_app1 + 1;
+   
+            if(way_start_app2 > 0)
+                way_start_app2 = way_start_app2 - 1;
+
+             if(num_warps_app1 > 1)
+		num_warps_app1 = num_warps_app1 - 1;
+
+             if(num_warps_app2 < 48)
+		num_warps_app2 = num_warps_app2 + 1;
+            }
+
+           if(counter2 == 3)              
+           {
+           if(num_cta_app2 > 1)
+             num_cta_app2 = num_cta_app2 - 1;
+
+           if(num_cta_app1 < 8) //Also check if high idle stalls
+             num_cta_app1 = num_cta_app1 + 1;
+
+
+            if(way_start_app2 < 7)
+                way_start_app2 = way_start_app2 + 1;
+
+            if(way_start_app1 > 0)
+		way_start_app1 = way_start_app1 - 1;
+
+
+             if(num_warps_app2 > 1)
+                num_warps_app2 = num_warps_app2 - 1;
+
+             if(num_warps_app1 < 48)
+                num_warps_app1 = num_warps_app1 + 1;
+            }
+  }
+
+      printf("Counter 1 and counter 2 are %d and %d \n",counter1,counter2);   
+      printf("Num cta 1 and num cta 2 are %d and %d \n",num_cta_app1,num_cta_app2); 
+      printf("Way start  app1 and app2  are %d and %d \n",way_start_app1,way_start_app2);
+      printf("Num warps are %d and %d \n", num_warps_app1, num_warps_app2);
+ }	
+
       // new
       unsigned threshold;
 	  if(gpu_mode3 ==0)
@@ -1731,13 +1882,13 @@ void gpgpu_sim::cycle()
             hrs     = elapsed_time/3600 - 24*days;
             minutes = elapsed_time/60 - 60*(hrs + 24*days);
             sec = elapsed_time - 60*(minutes + 60*(hrs + 24*days));
-            printf("GPGPU-Sim uArch: cycles simulated: %lld  inst.: %lld (ipc=%4.1f) sim_rate=%u (inst/sec) elapsed = %u:%u:%02u:%02u / %s", 
+            /*printf("GPGPU-Sim uArch: cycles simulated: %lld  inst.: %lld (ipc=%4.1f) sim_rate=%u (inst/sec) elapsed = %u:%u:%02u:%02u / %s", 
                    gpu_tot_sim_cycle + gpu_sim_cycle, gpu_tot_sim_insn + gpu_sim_insn, 
                    (double)gpu_sim_insn/(double)gpu_sim_cycle,
                    (unsigned)((gpu_tot_sim_insn+gpu_sim_insn) / elapsed_time),
                    (unsigned)days,(unsigned)hrs,(unsigned)minutes,(unsigned)sec,
                    ctime(&curr_time));
-
+*/
 	   			printf("gpu_sim_insn_1 = %lld (ipc=%4.1f, lat=) \n", gpu_sim_insn_1, (double) gpu_sim_insn_1/gpu_tot_sim_cycle_stream_1); //new mf latency
 	   			printf("gpu_sim_insn_2 = %lld (ipc=%4.1f, lat=) \n", gpu_sim_insn_2, (double) gpu_sim_insn_2/gpu_tot_sim_cycle_stream_2);
 				if(gpu_mode3)
@@ -1781,16 +1932,23 @@ void gpgpu_sim::cycle()
                     print_stats();
         			output = freopen("stream1.txt", "a", file1);
                     gpu_print_stat_file(output);
-  				    fflush(output);
+  				   fflush(output);
  				    fclose(output);
+                    output = freopen("nolabel_result.csv","w",file7);
+                    gpu_print_stat_nolabel(output);
+                    fflush(output);
+
+                 
                     abort();
                 }
 	}
      //Trinayan:Write to file when completely done
     else if ((m_config.gpu_max_insn_opt && ((gpu_sim_insn_1 >= m_config.gpu_max_insn_opt) || (gpu_sim_insn_2 >= m_config.gpu_max_insn_opt) || (gpu_sim_insn_3 >= m_config.gpu_max_insn_opt))))  {
         max_insn_struck = true;
-        output = freopen("final_result.txt","w",file6);
+        output = freopen("final_result.csv","w",file6);
         gpu_print_stat_file(output);
+        output = freopen("nolabel_result.csv","w",file7);
+        gpu_print_stat_nolabel(output);
         fflush(output);
         abort();
     }

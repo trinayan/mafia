@@ -412,6 +412,7 @@ public:
    const gpgpu_sim_config &get_config() const { return m_config; }
    void gpu_print_stat();
    void gpu_print_stat_file(FILE* file);
+   void gpu_print_stat_nolabel(FILE* file);
    void gpu_print_final_stat_file(FILE* file);
    int get_gpu_app();
    void app_cache_flush(int i);

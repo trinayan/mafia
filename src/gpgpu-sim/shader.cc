@@ -60,17 +60,25 @@ extern int gpu_sms_app1;
 extern int culprit;
 
 
-int num_warps_app1 = 36;
-int num_warps_app2 = 36;
+extern unsigned num_warps_app1;
+extern unsigned num_warps_app2;
 
 extern unsigned int g_core_stallcurr_1;
 extern unsigned int g_core_stallcurr_2;
+
+extern unsigned int g_idle_stall_1;
+extern unsigned int g_idle_stall_2;
+
+extern unsigned int g_mem_stall_1;
+extern unsigned int g_mem_stall_2;
 
 extern unsigned swl_active;
 extern unsigned ctl_throttle;
 
 extern unsigned num_cta_app1;
 extern unsigned num_cta_app2;
+
+extern long long inscounter;
 
 #define PRIORITIZE_MSHR_OVER_WB 1
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -783,72 +791,23 @@ void shader_core_ctx::issue(){
 
  if(swl_active == 1)
 {
- if(culprit == 1)
-    {
 	if(this->get_sid() < gpu_sms_app1) {
-
-             if(num_warps_app1 > 2) {
-               if(this->get_sid() == 0)
-		  num_warps_app1 = num_warps_app1 - 2;
-             }
-             for (unsigned i = 0; i < schedulers.size(); i++) 
-        		schedulers[i]->cycle(num_warps_app1);
-           }    
-           
-          else if (this->get_sid() >= gpu_sms_app1) {
-               if(num_warps_app2 < 36) {
-                  if(this->get_sid() == gpu_sms_app1)
-		      num_warps_app2 = num_warps_app2 + 2;	
-             } 
-            for (unsigned i = 0; i < schedulers.size(); i++) 
-                        schedulers[i]->cycle(num_warps_app2);  
+        for (unsigned i = 0; i < schedulers.size(); i++) {
+                schedulers[i]->cycle(num_warps_app1);
+        }
+        }
+       else {
+           for (unsigned i = 0; i < schedulers.size(); i++) {
+                schedulers[i]->cycle(num_warps_app2);
           }
       }
-
-   else if(culprit == 2)
-   {
-       if(this->get_sid() >= gpu_sms_app1) {
-
-             if(num_warps_app2 > 2) {
-               if(this->get_sid() == gpu_sms_app1)
-                  num_warps_app2 = num_warps_app2 - 2;
-             }
-             for (unsigned i = 0; i < schedulers.size(); i++) 
-                        schedulers[i]->cycle(num_warps_app2);
-           } 
-   
-          else if (this->get_sid() < gpu_sms_app1) {
-               if(num_warps_app1 < 36) {
-                  if(this->get_sid() == 0)
-                      num_warps_app1 = num_warps_app1 + 2;
-             }
-            for (unsigned i = 0; i < schedulers.size(); i++)
-                        schedulers[i]->cycle(num_warps_app1);
-         }
-    }
-
-   if(culprit == 0)
-   {
-
-  if(this->get_sid() < gpu_sms_app1) {
-    for (unsigned i = 0; i < schedulers.size(); i++) {
-        schedulers[i]->cycle(num_warps_app1);
-    }
-    }
-
-   else if(this->get_sid() >= gpu_sms_app1) {
-      for (unsigned i = 0; i < schedulers.size(); i++) {
-        schedulers[i]->cycle(num_warps_app2);
-    }
-   }
-   }
-  
 }
+
 else if(swl_active == 0)
  {
  for (unsigned i = 0; i < schedulers.size(); i++) {
 
-		schedulers[i]->cycle(num_warps_app1);
+		schedulers[i]->cycle(48);
 	}
 }
   
@@ -1061,14 +1020,36 @@ void scheduler_unit::cycle(int num_warps_limit)
 	int threshold;
 
     //Trinayan see if it is possible to throttle the culprit based on its idle behavior
-    if(!valid_inst)
+    if(!issued_inst)
+
     {
-        if(this->get_sid() < gpu_sms_app1)
+        if(m_shader->get_sid() < gpu_sms_app1)
             g_core_stallcurr_1++;
-        else if(this->get_sid() >= gpu_sms_app1)
+        else if(m_shader->get_sid() >= gpu_sms_app1)
             g_core_stallcurr_2++;
 
     }
+
+    if(!valid_inst)
+   
+    {
+      if(m_shader->get_sid() < gpu_sms_app1)
+            g_idle_stall_1++;
+        else if(m_shader->get_sid() >= gpu_sms_app1)
+            g_idle_stall_2++;
+
+    }
+
+
+    if(!ready_inst)
+     {
+ 
+       if(m_shader->get_sid() < gpu_sms_app1)
+            g_mem_stall_1++;
+        else if(m_shader->get_sid() >= gpu_sms_app1)
+            g_mem_stall_2++;
+
+     }
 
     // issue stall statistics:
     if( !valid_inst ){ 
@@ -1457,6 +1438,7 @@ else
   if( gpu_mode3 == 0){
 	if(m_sid < threshold) {
 		m_gpu->gpu_sim_insn_1 += inst.active_count();
+                inscounter++;
 		//m_gpu->gpu_compute_1 += compute*inst.active_count();
 		//m_gpu->gpu_memory_1 += memory*inst.active_count();
 	}
@@ -2657,14 +2639,14 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int s
       result_regs = gpgpu_shader_registers / (padded_cta_size * ((kernel_info->regs+3)&~3));
 
    //Limit by CTA
-   unsigned int result_cta = max_cta_per_core;
-
+   unsigned int result_cta = 8;
+//Trinayan code for cta throttling
     if(ctl_throttle == 1)
     {
         if(sm_id < gpu_sms_app1)
             result_cta = num_cta_app1;
         else if(sm_id >= gpu_sms_app1)
-            result_cta = num_cta_app2;
+             result_cta = num_cta_app2;
     }
 
 
@@ -2702,9 +2684,6 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int s
     }
 
 //   printf("Thr is %d \n",ctl_throttle);
-
-
-
 
     return result; 
 }
@@ -2971,7 +2950,7 @@ void shader_core_ctx::set_max_cta( const kernel_info_t &kernel )
    
     kernel_max_cta_per_shader = m_config->max_cta(kernel, sm_id); //new
     
-    printf("SM id is %d and max cta is %d \n", sm_id,kernel_max_cta_per_shader);
+    //printf("SM id is %d and max cta is %d \n", sm_id,kernel_max_cta_per_shader);
 	
     unsigned int gpu_cta_size = kernel.threads_per_cta();
     kernel_padded_threads_per_cta = (gpu_cta_size%m_config->warp_size) ? 
