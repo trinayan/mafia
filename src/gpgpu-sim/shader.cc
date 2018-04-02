@@ -1262,7 +1262,7 @@ void swl_scheduler::order_warps(int num_warps_limit)
         order_by_priority( m_next_cycle_prioritized_warps,
                            m_supervised_warps,
                            m_last_supervised_issued,
-                           MIN( 2, m_supervised_warps.size() ),
+                           MIN(num_warps_limit, m_supervised_warps.size() ),
                            ORDERING_GREEDY_THEN_PRIORITY_FUNC,
                            scheduler_unit::sort_warps_by_oldest_dynamic_id );
     } else {
