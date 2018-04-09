@@ -1019,8 +1019,15 @@ void scheduler_unit::cycle(int num_warps_limit)
     }
 	int threshold;
 
+    if(!issued_inst && ready_inst && valid_inst)
+     {
+     if(m_shader->get_sid() < gpu_sms_app1)
+            g_core_stallcurr_1++;
+     else if(m_shader->get_sid() >= gpu_sms_app1)
+            g_core_stallcurr_2++;
+     }
     //Trinayan see if it is possible to throttle the culprit based on its idle behavior
-    if(!issued_inst)
+   /* if(!issued_inst)
 
     {
         if(m_shader->get_sid() < gpu_sms_app1)
@@ -1028,7 +1035,7 @@ void scheduler_unit::cycle(int num_warps_limit)
         else if(m_shader->get_sid() >= gpu_sms_app1)
             g_core_stallcurr_2++;
 
-    }
+    }*/
 
     if(!valid_inst)
    
@@ -1041,7 +1048,7 @@ void scheduler_unit::cycle(int num_warps_limit)
     }
 
 
-    if(!ready_inst)
+    if(!ready_inst && valid_inst) //Valid but not ready
      {
  
        if(m_shader->get_sid() < gpu_sms_app1)
@@ -2151,16 +2158,16 @@ void shader_core_ctx::register_cta_thread_exit( unsigned cta_num )
       m_n_active_cta--;
       m_barriers.deallocate_barrier(cta_num);
       shader_CTA_count_unlog(m_sid, 1);
-      printf("GPGPU-Sim uArch: Shader %d finished CTA #%d (%lld,%lld), %u CTAs running\n", m_sid, cta_num, gpu_sim_cycle, gpu_tot_sim_cycle,
-             m_n_active_cta );
+      //printf("GPGPU-Sim uArch: Shader %d finished CTA #%d (%lld,%lld), %u CTAs running\n", m_sid, cta_num, gpu_sim_cycle, gpu_tot_sim_cycle,
+             //m_n_active_cta );
       if( m_n_active_cta == 0 ) {
           assert( m_kernel != NULL );
           m_kernel->dec_running();
-          printf("GPGPU-Sim uArch: Shader %u empty (release kernel %u \'%s\').\n", m_sid, m_kernel->get_uid(),
-                 m_kernel->name().c_str() );
+        //  printf("GPGPU-Sim uArch: Shader %u empty (release kernel %u \'%s\').\n", m_sid, m_kernel->get_uid(),
+               //  m_kernel->name().c_str() );
           if( m_kernel->no_more_ctas_to_run() ) {
               if( !m_kernel->running() ) {
-                  printf("GPGPU-Sim uArch: GPU detected kernel \'%s\' finished on shader %u.\n", m_kernel->name().c_str(), m_sid );
+          //        printf("GPGPU-Sim uArch: GPU detected kernel \'%s\' finished on shader %u.\n", m_kernel->name().c_str(), m_sid );
                   m_gpu->set_kernel_done( m_kernel );
               }
           }
@@ -2649,7 +2656,7 @@ unsigned int shader_core_config::max_cta( const kernel_info_t &k, unsigned int s
              result_cta = num_cta_app2;
     }
 
-
+   //printf("CTL throttle is %d \nResult cta is %d \n", result_cta);
    unsigned result = result_thread;
    result = gs_min2(result, result_shmem);
    result = gs_min2(result, result_regs);

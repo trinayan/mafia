@@ -150,8 +150,8 @@
     unsigned cache_bypass = 0;
     unsigned ctl_throttle = 0;
 
-    unsigned num_cta_app1 = 1;
-    unsigned num_cta_app2 = 1;
+    unsigned num_cta_app1 = 8;
+    unsigned num_cta_app2 = 8;
 
 
 
@@ -168,12 +168,37 @@
     unsigned long long inscounter = 0;
 
 
-    unsigned num_warps_app1 = 48;
-    unsigned num_warps_app2 = 48;
+    unsigned num_warps_app1 = 4;
+    unsigned num_warps_app2 = 4;
 
 
-    unsigned long bw_util_app1 = 0;
-    unsigned long bw_util_app2 = 0;
+    float        bw_util_app1 = 0;
+    float        bw_util_app2 = 0;
+
+
+    float dram_cycle_app1 = 0;
+    float dram_cycle_app2 = 0;
+
+    float fairness_goal;
+    float ipc_alone_app1;
+    float ipc_alone_app2;
+
+    float  unfairness_table[8][8];
+
+   
+    float min_unfairness;
+
+
+    int app1_warp_index = 7;
+    int app2_warp_index = 7;
+
+   int stuck = 0;
+
+   int num_warps_app1_prev_interval;
+   int num_warps_app2_prev_interval;
+
+   unsigned turn_throttle_on_app1 = 0;
+   unsigned turn_throttle_on_app2 = 0;
 
     #include "mem_latency_stat.h"
 
@@ -466,6 +491,20 @@
                    "Decides if swl is to be applied",
                    "0");
 
+       option_parser_register(opp, "-gpgpu_fairness_goal", OPT_FLOAT, &fairness_goal,
+                   "Fairness target",
+                   "0");
+        
+       option_parser_register(opp, "-gpgpu_ipc_1", OPT_FLOAT, &ipc_alone_app1,
+                   "IPC of application 1",
+                   "0");
+
+        option_parser_register(opp, "-gpgpu_ipc_2", OPT_FLOAT, &ipc_alone_app2,
+                   "IPC of application 2",
+                   "0");
+
+
+
         option_parser_register(opp, "-gpgpu_cache_bypass", OPT_INT32, &cache_bypass,
                    "Decides if cache bypass is to be applied",
                    "0");
@@ -595,7 +634,7 @@
        if (m_config.gpu_max_cta_opt != 0) {
           if( m_total_cta_launched >= m_config.gpu_max_cta_opt )
               return false;
-       }
+      }
        for(unsigned n=0; n < m_running_kernels.size(); n++ ) {
            if( m_running_kernels[n] && !m_running_kernels[n]->no_more_ctas_to_run() )
                return true;
@@ -1582,10 +1621,28 @@
           if( g_single_step && ((gpu_sim_cycle+gpu_tot_sim_cycle) >= g_single_step) ) {
               asm("int $03");
           }
+
+
+
+          
+
+          int  allowed_warps[8] = {2,4,6,8,16,24,36,48}; 
+
           gpu_sim_cycle++;
 
 
-        if(gpu_sim_cycle % 512 == 0)
+          if(gpu_sim_cycle < 10)
+          {
+	    for(int i = 0; i < 8; i++)
+              {
+                for(int j = 0; j < 8; j++)
+                  {
+                      unfairness_table[i][j] = -1;
+                   } 
+             }
+           }
+
+        if(gpu_sim_cycle % 1024 == 0 && gpu_sim_cycle > 10000)
           {
 
              inscounter = 0;
@@ -1666,24 +1723,19 @@
               fprintf(output,"%f,%f,%f,%f,%f,%f,%f\n",mpki_1,mpki_2,float(gpu_stall_dram_full_diff)/curr_cycle,float(gpu_stall_icnt_full_diff)/curr_cycle,float(difference_insn_1)/float(curr_cycle),float(difference_insn_2)/float(curr_cycle),float(g_mem_stall_1)/(15*curr_cycle));
 
 
-              //Trinayan: End impact calculation
-    /*
-              printf("GCore stalls are %f and %f\n", float(g_core_stallcurr_1)/(512*15), float(g_core_stallcurr_2)/(512*15));
-
-               printf("Idle stalls are %f and %f\n", float(g_idle_stall_1)/(512*15), float(g_idle_stall_2)/(512*15));
-
-                printf("Mem stalls are %f and %f\n", float(g_mem_stall_1)/(512*15), float(g_mem_stall_2)/(512*15));
+               float mem_stall_app1 =  float(g_mem_stall_1)/(curr_cycle*15);
+               float mem_stall_app2 =  float(g_mem_stall_2)/(curr_cycle*15);
+               float idle_stall_app1 = float(g_idle_stall_1)/(curr_cycle*15);
+               float idle_stall_app2 = float(g_idle_stall_2)/(curr_cycle*15);
 
 
-              printf("DRAM and ICNT stalls are %f and %f\n",float(gpu_stall_dram_full_diff)/(12*512),float(gpu_stall_icnt_full_diff)/(12*512));
+               float issue_stall_app1 = float(g_core_stallcurr_1)/(curr_cycle*15);
+               float issue_stall_app2 = float(g_core_stallcurr_2)/(curr_cycle*15);
 
 
-               g_core_stallcurr_1 = 0;
-               g_core_stallcurr_2 = 0;
-           g_idle_stall_1 = 0;
-           g_idle_stall_2 = 0;
-           g_mem_stall_1 = 0;
-           g_mem_stall_2 = 0;*/
+               printf("Mem stalls are %f and %f\n",mem_stall_app1,mem_stall_app2);
+               printf("Idle stalls are %f and %f\n",idle_stall_app1,idle_stall_app2);
+               printf("Issue stall are %f and %f\n",issue_stall_app1,issue_stall_app2);
               //Trinayan: Throttle culprit accordingly if dram stalls and icnt stalls are high
               //Before throttling the cluprit we need to know two things basically
               // 1. How much problem the culprit is causing (dram_stall, icnt_stall)
@@ -1691,79 +1743,198 @@
               // 3. We decide by tradeoff here.
               //If culprit is switching we may want to wait before making a decision.
 
-         if(swl_active || ctl_throttle || cache_bypass)
-       {
-             if(mpki_1 > mpki_2) {
-                if(counter1 < 3)
-                    counter1++;
 
-                if(counter2 > 0)
-            counter2--;
-                  }
-              else if(mpki_1 < mpki_2) {
-                  if(counter1 > 0)
-                        counter1--;
-
-                  if(counter2 < 3)
-                        counter2++;
-                }
-
-              if(counter1 == 3)
-               {
-               if(num_cta_app1 > 1)
-                 num_cta_app1 = num_cta_app1 - 1;
+         //fill up table
 
 
-               if(num_cta_app2 < 8) //Also check if high idle stalls
-             num_cta_app2 = num_cta_app2 + 1;
+      
+       float ipc_co_app1 = (float(get_gpu_insn(1))/float(gpu_sim_cycle));
+       float ipc_co_app2 = ((float((get_gpu_insn(2))/float(gpu_sim_cycle))));
+       float slowdown_app1 = 1.0 - ipc_co_app1/ipc_alone_app1;
+       float slowdown_app2 = 1.0 - ipc_co_app2/ipc_alone_app2;
 
-                if(way_start_app1 <7)
-            way_start_app1 = way_start_app1 + 1;
+       float uf1 = slowdown_app1/slowdown_app2;
+       float uf2 = slowdown_app2/slowdown_app1;
 
-                if(way_start_app2 > 0)
-                    way_start_app2 = way_start_app2 - 1;
+       float unfairness = 0;
 
-                 if(num_warps_app1 > 1)
-            num_warps_app1 = num_warps_app1 - 1;
+       printf("Slowdown is %f and %f, IPC1 %f, IPC2 %f\n", slowdown_app1, slowdown_app2,ipc_co_app1,ipc_co_app2);
 
-                 if(num_warps_app2 < 48)
-            num_warps_app2 = num_warps_app2 + 1;
-                }
+     if(slowdown_app2 > 1.2*slowdown_app1)
+     {
+	turn_throttle_on_app1 = 1;
+        turn_throttle_on_app2 = 0;
 
-               if(counter2 == 3)
-               {
-               if(num_cta_app2 > 1)
-                 num_cta_app2 = num_cta_app2 - 1;
+        //if(num_cta_app2 < 8 && idle_stall_app2 > 0.50 && mem_stall_app2 > 0.50)
+          // num_cta_app2 = num_cta_app2 + 1;
+       }
 
-               if(num_cta_app1 < 8) //Also check if high idle stalls
-                 num_cta_app1 = num_cta_app1 + 1;
+      else if(slowdown_app1 > 1.2*slowdown_app2)
+      { 
+         turn_throttle_on_app2 = 1;
+         turn_throttle_on_app1 = 0;
+         
+      }
+      else
+      {
+         turn_throttle_on_app1 = 1;
+         turn_throttle_on_app2 = 0;
 
-
-                if(way_start_app2 < 7)
-                    way_start_app2 = way_start_app2 + 1;
-
-                if(way_start_app1 > 0)
-            way_start_app1 = way_start_app1 - 1;
-
-
-                 if(num_warps_app2 > 1)
-                    num_warps_app2 = num_warps_app2 - 1;
-
-                 if(num_warps_app1 < 48)
-                    num_warps_app1 = num_warps_app1 + 1;
-                }
       }
 
-          printf("Counter 1 and counter 2 are %d and %d \n",counter1,counter2);
-          printf("Num cta 1 and num cta 2 are %d and %d \n",num_cta_app1,num_cta_app2);
-          printf("Way start  app1 and app2  are %d and %d \n",way_start_app1,way_start_app2);
-          printf("Num warps are %d and %d \n", num_warps_app1, num_warps_app2);
-          printf("BW util are %d and %d \n",bw_util_app1,bw_util_app2);
-          bw_util_app1 = 0;
-          bw_util_app2 = 0;
+     printf("Throttle is %d and %d\n", turn_throttle_on_app1,turn_throttle_on_app2);
+
+      if(idle_stall_app1 >= 0.50 || mem_stall_app1 >= 0.50)
+      {
+       
+       if(num_warps_app1 < 48 && turn_throttle_on_app1 != 1)
+	  num_warps_app1 = num_warps_app1 + 4;
+
+    
+      }
+
+     else if(idle_stall_app1 < 0.50 || mem_stall_app1 < 0.50)
+     {
+        if(num_warps_app1 > 4 && turn_throttle_on_app1 == 1)
+           num_warps_app1 = num_warps_app1 - 4;
+
      }
 
-          // new
+     if(idle_stall_app2 >= 0.50 || mem_stall_app2 >= 0.50)
+      {
+
+       if(num_warps_app2 < 48  && turn_throttle_on_app2 != 1)
+          num_warps_app2 = num_warps_app2 + 4;
+
+      }
+
+     else if(idle_stall_app2 <= 0.50 ||  mem_stall_app2 <= 0.50)
+     {
+        if(num_warps_app2 > 4 && turn_throttle_on_app2 == 1)
+           num_warps_app2 = num_warps_app2 - 4;
+     }
+
+
+
+
+       printf("Num cta 1 and num cta 2 are %d and %d \n",num_cta_app1,num_cta_app2);
+      float dram_stalls = float(gpu_stall_dram_full_diff)/curr_cycle;
+
+     /* if(idle_stall_app2 >= 0.50) // SM is idling. Lets see if we can increase activity
+        {    
+         if(num_cta_app2 < 8 && turn_throttle_on_app2 != 1) //Safe to increase
+              {
+                num_cta_app2 = num_cta_app2 + 1;
+               
+              }
+       
+          if(num_cta_app2 > 1 && turn_throttle_on_app2 == 1) //
+              {
+                num_cta_app2 = num_cta_app2 - 1;
+
+              }
+ 
+        }
+
+       else if(idle_stall_app2 < 0.50) //SMs are quite busy. Lets see if we can decrease congestions
+        {
+           if(num_cta_app2 > 1 && turn_throttle_on_app2 == 1) //This app is congesting. Decrease
+              {
+                num_cta_app2 = num_cta_app2 - 1;
+
+              }
+
+           if(num_cta_app2 < 8 && turn_throttle_on_app2 != 1) //It is ok to increase
+            {
+              num_cta_app2 = num_cta_app2 + 1;
+            }
+         }
+
+
+        if(idle_stall_app1 >= 0.50) // SM is idling. Lets see if we can increase activity
+        {
+         if(num_cta_app1 < 8 && turn_throttle_on_app1 != 1) //Safe to increase
+              {
+                num_cta_app1 = num_cta_app1 + 1;
+
+              }
+
+          if(num_cta_app1 > 1 && turn_throttle_on_app1 == 1) //
+              {
+                num_cta_app1 = num_cta_app1 - 1;
+
+              }
+
+        }
+
+       else if(idle_stall_app1 < 0.50) //SMs are quite busy. Lets see if we can decrease congestions
+        {
+           if(num_cta_app1 > 1 && turn_throttle_on_app1 == 1) //This app is congesting. Decrease
+              {
+                num_cta_app1 = num_cta_app1 - 1;
+
+              }
+
+           if(num_cta_app1 < 8 && turn_throttle_on_app1 != 1) //It is ok to increase
+            {
+              num_cta_app1 = num_cta_app1 + 1;
+            }
+         }*/
+
+      
+       
+
+     /* if(mem_stall_app1 >= 0.50 && turn_throttle_on_app1 == 1)
+      {
+       turn_throttle_on_app1 = 0;
+       if(num_cta_app1 < 8)
+	 num_cta_app1 = num_cta_app1 + 1;
+ 
+      }
+
+       if(mem_stall_app2 >= 0.50 && turn_throttle_on_app2 == 1)
+      {
+       turn_throttle_on_app2 = 0;
+       if(num_cta_app2 < 8)
+         num_cta_app2 = num_cta_app2 + 1;
+
+      }*/
+     
+     
+      
+       if(uf1 > uf2)
+	  unfairness = uf1;
+       else
+          unfairness = uf2;
+
+     
+             
+          printf("Num cta 1 and num cta 2 are %d and %d \n",num_cta_app1,num_cta_app2);
+
+          //printf("Counter 1 and counter 2 are %d and %d \n",counter1,counter2);
+          //printf("Num cta 1 and num cta 2 are %d and %d \n",num_cta_app1,num_cta_app2);
+          //printf("Way start  app1 and app2  are %d and %d \n",way_start_app1,way_start_app2);
+          printf("Num warps are %d and %d \n", num_warps_app1, num_warps_app2);
+          
+          printf("DRAM stall is %f \n", float(gpu_stall_dram_full_diff)/curr_cycle);
+          printf("ICNT stall is %f\n",float(gpu_stall_icnt_full_diff)/curr_cycle);
+          printf("BW util are %f and %f \n",bw_util_app1,bw_util_app2);          
+         bw_util_app1 = 0;
+          bw_util_app2 = 0;
+          g_core_stallcurr_1 = 0;
+          g_core_stallcurr_2 = 0;
+           g_idle_stall_1 = 0;
+           g_idle_stall_2 = 0;
+           g_mem_stall_1 = 0;
+           g_mem_stall_2 = 0;
+          dram_cycle_app1 = 0;
+          dram_cycle_app2 = 0;
+
+         num_warps_app1_prev_interval = num_warps_app1;
+         num_warps_app2_prev_interval = num_warps_app2;
+
+     }
+
           unsigned threshold;
           if(gpu_mode3 ==0)
             threshold = gpu_sms_app1;

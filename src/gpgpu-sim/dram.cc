@@ -42,8 +42,8 @@ extern int gpu_sms_app1;
 
 
 
-extern unsigned long bw_util_app1;
-extern unsigned long bw_util_app2;
+extern float  bw_util_app1;
+extern float  bw_util_app2;
 
 #ifdef DRAM_VERIFY
 int PRINT_CYCLE = 0;
@@ -51,6 +51,10 @@ int PRINT_CYCLE = 0;
 
 template class fifo_pipeline<mem_fetch>;
 template class fifo_pipeline<dram_req_t>;
+
+
+extern float dram_cycle_app1;
+extern float dram_cycle_app2;
 
 dram_t::dram_t( unsigned int partition_id, const struct memory_config *config, memory_stats_t *stats,
                 memory_partition_unit *mp )
@@ -310,6 +314,7 @@ void dram_t::cycle()
    }
    bool issued = false;
 
+   unsigned last_app = 0;
    // check if any bank is ready to issue a new read
    for (unsigned i=0;i<m_config->nbk;i++) {
       unsigned j = (i + prio) % m_config->nbk;
@@ -327,19 +332,19 @@ void dram_t::cycle()
 		  
           k_app[0]++;
           
-          /*if (group_testing(bk[j]->mrq->data->get_sid()) == 1) {
+          if ((bk[j]->mrq->data->get_sid()) == 1) {
                   k_app[1]++;
                   last_app = 1;
           }
 
-          if (group_testing(bk[j]->mrq->data->get_sid()) == 2) {
+          if ((bk[j]->mrq->data->get_sid()) == 2) {
                   k_app[2]++;
                   last_app = 2;
           }
-          if (group_testing(bk[j]->mrq->data->get_sid()) == 3) {
+          if ((bk[j]->mrq->data->get_sid()) == 3) {
                   k_app[3]++;
                   last_app = 3;
-          }*/
+          }
 		  
         if(bk[j]->mrq->data->get_sid() != -1) { //new
 			if (find_app(bk[j]->mrq->data->get_sid()) == 1) {
@@ -512,7 +517,7 @@ void dram_t::cycle()
 		else{
 			k_app[0]++;
 			
-			/*if (last_app == 1) {
+			if (last_app == 1) {
 				 k_app[1]++;
 			}
 	
@@ -521,7 +526,7 @@ void dram_t::cycle()
 			}
 			if (last_app == 3) {
 				 k_app[3]++;
-			}*/
+			}
 			
 			
 		}	
@@ -547,10 +552,13 @@ void dram_t::cycle()
    
    if (k_app[1]) {
 	dram_cycles_active[1]++;
+        dram_cycle_app1++;
+       
    }
    
    if (k_app[2]) {
 	dram_cycles_active[2]++;
+        dram_cycle_app2++;
 
    }
    if (k_app[3]) {

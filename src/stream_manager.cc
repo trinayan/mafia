@@ -56,7 +56,24 @@ bool stat_flag_1 = false;
 bool stat_flag_2 = false;
 bool stat_flag_3 = false;
 
+
+extern unsigned num_cta_app1;
+extern unsigned num_cta_app2;
+
+extern unsigned counter1;
+extern unsigned counter2;
+
+extern unsigned  way_start_app1;
+extern unsigned way_end_app1;
+extern unsigned way_start_app2;
+extern unsigned way_end_app2;
+
+extern unsigned num_warps_app1;
+extern unsigned num_warps_app2;
+
 extern int gpu_mode3;
+
+extern float    unfairness_table[8][8];
 
 CUstream_st::CUstream_st() 
 {
@@ -259,6 +276,53 @@ void stream_operation::do_operation( gpgpu_sim *gpu )
         	gpu->set_cache_config(m_kernel->name());
 	
         	printf("kernel \'%s\' transfer to GPU hardware scheduler\n", m_kernel->name().c_str() );
+          
+      //Reset counters since new kernel may have different behavior 
+
+
+       /*     num_cta_app1 = 8;
+ 	    num_cta_app2 = 8;
+
+            counter1 = 0;
+            counter2 = 0;
+
+           way_start_app1 = 0;
+           way_end_app1   = 8;
+           way_start_app2 = 0;
+           way_end_app2   = 8;
+
+           num_warps_app1 = 48;
+           num_warps_app2 = 48;
+
+           for(unsigned i = 0; i < 48;i++)
+          {
+            for(unsigned j = 0; j < 2; j++)
+              {
+                  warp_table_app1[i][j] = 0;
+		  warp_table_app2[i][j] = 0;
+             }
+
+          }*/
+
+         /*for(unsigned i = 0; i < 8; i++)
+          {
+           for(unsigned j = 0; j < 8; j++)
+              {
+                unfairness_table[i][j] = -1;
+              }
+           }
+          num_warps_app1 = 48;
+          num_warps_app2 = 48;
+          app1_warp_index = 7;
+          app2_warp_index = 7;*/
+
+//           num_cta_app1 = 1;
+  //         num_cta_app2 = 1;
+
+         // num_warps_app1 = 4;
+          //num_warps_app2 = 4;
+            num_cta_app1 = 8;
+            num_cta_app2 = 8;
             if( m_sim_mode )
                 gpgpu_cuda_ptx_sim_main_func( *m_kernel );
             else
@@ -318,7 +382,8 @@ void stream_operation::do_operation( gpgpu_sim *gpu )
 				fprintf(output, "-------------------------------------------------\n");
 				gpu->gpu_print_stat_file(output);
 				fflush(output);
-           
+                               
+  				
 				printf( "COMPLETED\n");
 
 			}
